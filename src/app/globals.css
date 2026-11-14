@@ -1,0 +1,336 @@
+@import "tailwindcss";
+
+:root {
+  --bg-app: #09090b;
+  --bg-surface: #111114;
+  --bg-elevated: #18181c;
+  --bg-hover: #222228;
+  --border-subtle: #27272a;
+  --border-strong: #3f3f46;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --accent-emerald: #10b981;
+  --accent-blue: #3b82f6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre,
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Custom sleek dark scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Clean Markdown Prose Styling */
+.cortex-prose {
+  color: #e4e4e7;
+  font-size: 0.96rem;
+  line-height: 1.72;
+}
+
+.cortex-prose h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fafafa;
+  margin-top: 0.4rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #27272a;
+}
+
+.cortex-prose h2 {
+  font-size: 1.28rem;
+  font-weight: 650;
+  color: #f4f4f5;
+  margin-top: 1.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.cortex-prose h3 {
+  font-size: 1.06rem;
+  font-weight: 600;
+  color: #e4e4e7;
+  margin-top: 1.15rem;
+  margin-bottom: 0.45rem;
+}
+
+.cortex-prose p {
+  margin-bottom: 0.8rem;
+}
+
+.cortex-prose ul,
+.cortex-prose ol {
+  margin-bottom: 0.85rem;
+  padding-left: 1.4rem;
+}
+
+.cortex-prose ul {
+  list-style-type: disc;
+}
+
+.cortex-prose ol {
+  list-style-type: decimal;
+}
+
+.cortex-prose li {
+  margin-bottom: 0.3rem;
+}
+
+.cortex-prose blockquote {
+  border-left: 3px solid #10b981;
+  background: rgba(16, 185, 129, 0.06);
+  padding: 0.55rem 0.9rem;
+  margin: 0.85rem 0;
+  border-radius: 0 0.45rem 0.45rem 0;
+  color: #d4d4d8;
+}
+
+.cortex-prose pre {
+  position: relative;
+  background: #0d0d11;
+  border: 1px solid #27272a;
+  border-radius: 0.55rem;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  margin: 0.9rem 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.cortex-prose code {
+  background: #18181c;
+  border: 1px solid #27272a;
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.84em;
+  color: #a7f3d0;
+}
+
+.cortex-prose pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #e4e4e7;
+}
+
+.cortex-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.88rem;
+}
+
+.cortex-prose th,
+.cortex-prose td {
+  border: 1px solid #27272a;
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+}
+
+.cortex-prose th {
+  background: #141418;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.cortex-prose hr {
+  border: none;
+  border-top: 1px solid #27272a;
+  margin: 1.25rem 0;
+}
+
+.cortex-prose a.wikilink-chip {
+  display: inline-flex;
+  align-items: center;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 0.35rem;
+  padding: 0 0.38rem;
+  font-size: 0.9em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cortex-prose a.wikilink-chip:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.cortex-prose img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid #27272a;
+  margin: 0.75rem 0;
+}
+
+/* Transclusion Cards (Item 1) */
+.cortex-prose .transclusion-card {
+  margin: 0.9rem 0;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-left: 3px solid #10b981;
+  border-radius: 0.5rem;
+  background: rgba(16, 185, 129, 0.04);
+  overflow: hidden;
+}
+
+.cortex-prose .transclusion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(16, 185, 129, 0.09);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.18);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6ee7b7;
+  cursor: pointer;
+}
+
+.cortex-prose .transclusion-header:hover {
+  background: rgba(16, 185, 129, 0.16);
+}
+
+.cortex-prose .transclusion-body {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9em;
+  color: #d4d4d8;
+}
+
+.cortex-prose .transclusion-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* Mermaid Diagrams & LaTeX Math (Item 2) */
+.cortex-prose .cortex-mermaid-wrap {
+  margin: 1rem 0;
+  padding: 0.85rem;
+  border-radius: 0.55rem;
+  border: 1px solid #27272a;
+  background: #0c0d14;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.cortex-prose svg.cortex-mermaid {
+  display: block;
+}
+
+.cortex-prose .cortex-mermaid-card {
+  margin: 0.9rem 0;
+  border: 1px solid #312e81;
+  border-radius: 0.55rem;
+  background: #0f1120;
+  padding: 0.65rem 0.85rem;
+}
+
+.cortex-prose .cortex-mermaid-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #a5b4fc;
+  margin-bottom: 0.4rem;
+}
+
+.cortex-prose .cortex-math-block {
+  margin: 0.95rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #27272a;
+  background: #0f1117;
+  text-align: center;
+  font-family: "Cambria Math", "Times New Roman", Georgia, serif;
+  font-size: 1.08rem;
+  color: #e0f2fe;
+  overflow-x: auto;
+}
+
+.cortex-prose .cortex-math-inline {
+  font-family: "Cambria Math", "Times New Roman", Georgia, serif;
+  color: #bae6fd;
+  padding: 0 0.18rem;
+}
+
+.cortex-prose .cortex-math-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 0.2rem;
+  line-height: 1.1;
+  font-size: 0.88em;
+}
+
+.cortex-prose .cortex-math-num {
+  padding: 0 0.25rem 0.12rem;
+  border-bottom: 1px solid #94a3b8;
+}
+
+.cortex-prose .cortex-math-den {
+  padding: 0.12rem 0.25rem 0;
+}
+
+.cortex-prose .cortex-math-sqrt {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.cortex-prose .cortex-math-rad {
+  border-top: 1px solid #94a3b8;
+  padding: 0 0.2rem;
+  margin-left: 0.06rem;
+}
+
+.cortex-prose .cortex-math-text {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.88em;
+}
+
+/* Synchronized Editor Gutter (Item 4) */
+.cortex-editor-gutter {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.625;
+  user-select: none;
+}
+
+.cortex-editor-textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.625;
+}

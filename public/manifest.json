@@ -1,0 +1,27 @@
+{
+  "name": "CortexMD — AI-Native Second Brain",
+  "short_name": "CortexMD",
+  "description": "Self-hosted, Markdown-first knowledge management with grounded AI and local graph",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "capture_title",
+      "text": "capture_text",
+      "url": "capture_url"
+    }
+  }
+}
