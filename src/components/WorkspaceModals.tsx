@@ -746,129 +746,128 @@ export function SettingsModal({
           </div>
         )}
 
-        {/* Modular Provider Status & Credentials */}
+        {/* Smart Vault Tools & Intelligence */}
         <div className="space-y-3 text-xs">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-zinc-200 flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-              <span>AI Provider Backends (Server-Side Encrypted Storage)</span>
+              <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Smart Vault Intelligence (100% Offline &amp; Private — No API Keys Needed)</span>
             </h3>
             {savedNotice && (
               <span className="text-emerald-400 font-medium">{savedNotice}</span>
             )}
           </div>
 
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-[11px] text-zinc-300 space-y-1">
+            <div className="font-semibold text-emerald-300 flex items-center gap-1">
+              <span>Zero-API-Key Architecture</span>
+            </div>
+            <p className="text-zinc-400 leading-relaxed">
+              CortexMD uses local math, SQLite FTS5, and in-process 384-dimensional vector embeddings directly on your machine.
+              No cloud accounts, no API keys, and no personal notes are ever transmitted across the internet.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {providers.map((p) => {
-              const isEditing = editingId === p.id;
-              return (
-                <div
-                  key={p.id}
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3.5 space-y-2"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-semibold text-zinc-100">{p.name}</div>
-                      <div className="text-[10px] text-zinc-400">
-                        Auth: {p.authMode} • Billing: {p.billingModel}
-                      </div>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        p.available
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-zinc-800 text-zinc-400"
-                      }`}
-                    >
-                      {p.available ? "Ready" : "Unavailable"}
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-zinc-300">{p.statusDetail}</p>
-                  <p className="text-[10px] text-zinc-500 font-mono leading-relaxed">
-                    {p.setupGuide}
-                  </p>
-
-                  {p.authMode !== "none" && (
-                    <div>
-                      {!isEditing ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingId(p.id);
-                            setSecret("");
-                            setEndpointUrl(p.endpointUrl || "");
-                            setModelName(p.modelName || "");
-                          }}
-                          className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer"
-                        >
-                          Configure {p.hasSecret ? "(Key Saved)" : "Credentials / Model"} →
-                        </button>
-                      ) : (
-                        <div className="space-y-2 pt-2 border-t border-zinc-800">
-                          {(p.authMode === "api-key" ||
-                            p.id === "github-copilot" ||
-                            p.id === "jetbrains-junie") && (
-                            <input
-                              type="password"
-                              value={secret}
-                              onChange={(e) => setSecret(e.target.value)}
-                              placeholder={
-                                p.hasSecret
-                                  ? "Enter new secret to replace saved key"
-                                  : "Paste API key or fine-grained CLI token"
-                              }
-                              className="w-full rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[11px] text-zinc-100"
-                            />
-                          )}
-                          {p.id === "ollama" && (
-                            <input
-                              value={endpointUrl}
-                              onChange={(e) => setEndpointUrl(e.target.value)}
-                              placeholder="http://127.0.0.1:11434"
-                              className="w-full rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[11px] text-zinc-100"
-                            />
-                          )}
-                          <input
-                            value={modelName}
-                            onChange={(e) => setModelName(e.target.value)}
-                            placeholder="Model name override"
-                            className="w-full rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[11px] text-zinc-100"
-                          />
-                          <div className="flex gap-1.5">
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                await onSaveProvider({
-                                  providerId: p.id,
-                                  enabled: true,
-                                  ...(secret.trim() ? { secret } : {}),
-                                  endpointUrl,
-                                  modelName,
-                                });
-                                setEditingId(null);
-                                setSavedNotice(`Saved ${p.name} config (AES-256-GCM)`);
-                                setTimeout(() => setSavedNotice(""), 3000);
-                              }}
-                              className="px-2.5 py-1 rounded bg-emerald-600 text-zinc-950 font-semibold text-[11px] cursor-pointer"
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(null)}
-                              className="px-2.5 py-1 rounded border border-zinc-700 text-zinc-400 text-[11px] cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          </div>
+            {providers
+              .filter((p) => p.id === "local-hybrid" || p.id === "ollama")
+              .map((p) => {
+                const isEditing = editingId === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3.5 space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-semibold text-zinc-100">{p.name}</div>
+                        <div className="text-[10px] text-zinc-400">
+                          {p.id === "local-hybrid" ? "Embedded (Zero Config)" : "Local HTTP (No API Key)"}
                         </div>
-                      )}
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          p.available
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}
+                      >
+                        {p.available ? "Active" : "Optional"}
+                      </span>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+
+                    <p className="text-[11px] text-zinc-300">{p.statusDetail}</p>
+                    <p className="text-[10px] text-zinc-500 font-mono leading-relaxed">
+                      {p.setupGuide}
+                    </p>
+
+                    {p.id === "ollama" && (
+                      <div>
+                        {!isEditing ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingId(p.id);
+                              setEndpointUrl(p.endpointUrl || "http://127.0.0.1:11434");
+                              setModelName(p.modelName || "llama3.2");
+                            }}
+                            className="text-[11px] text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                          >
+                            Configure Local Ollama URL / Model →
+                          </button>
+                        ) : (
+                          <div className="space-y-2 pt-2 border-t border-zinc-800">
+                            <div>
+                              <label className="text-[10px] text-zinc-400">Endpoint URL (Localhost):</label>
+                              <input
+                                value={endpointUrl}
+                                onChange={(e) => setEndpointUrl(e.target.value)}
+                                placeholder="http://127.0.0.1:11434"
+                                className="w-full rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[11px] text-zinc-100 mt-0.5"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-zinc-400">Local Model Name:</label>
+                              <input
+                                value={modelName}
+                                onChange={(e) => setModelName(e.target.value)}
+                                placeholder="llama3.2"
+                                className="w-full rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[11px] text-zinc-100 mt-0.5"
+                              />
+                            </div>
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await onSaveProvider({
+                                    providerId: p.id,
+                                    enabled: true,
+                                    endpointUrl,
+                                    modelName,
+                                  });
+                                  setEditingId(null);
+                                  setSavedNotice(`Saved local Ollama settings`);
+                                  setTimeout(() => setSavedNotice(""), 3000);
+                                }}
+                                className="px-2.5 py-1 rounded bg-emerald-600 text-zinc-950 font-semibold text-[11px] cursor-pointer"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingId(null)}
+                                className="px-2.5 py-1 rounded bg-zinc-800 text-zinc-300 text-[11px] cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </div>
 

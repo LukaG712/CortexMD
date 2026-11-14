@@ -306,11 +306,13 @@ export function AiSidebar({
                 onChange={(e) => setProviderId(e.target.value as ProviderId)}
                 className="w-full min-w-0 truncate rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-[11px] text-zinc-200 focus:outline-none focus:border-emerald-500"
               >
-                {providers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.available ? "Ready" : "Setup Needed"})
-                  </option>
-                ))}
+                {providers
+                  .filter((p) => p.id === "local-hybrid" || p.id === "ollama")
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.id === "local-hybrid" ? "Embedded Offline" : p.available ? "Local Ready" : "Localhost"})
+                    </option>
+                  ))}
               </select>
 
               <select

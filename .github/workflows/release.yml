@@ -12,8 +12,18 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            build_script: npm run dist:win
+          - os: macos-latest
+            build_script: npm run dist:mac
+          - os: ubuntu-latest
+            build_script: npm run dist:linux
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
@@ -29,7 +39,7 @@ jobs:
         run: npm ci
 
       - name: Build Desktop Application
-        run: npm run dist:win
+        run: ${{ matrix.build_script }}
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
@@ -38,5 +48,9 @@ jobs:
           files: |
             dist/*.exe
             dist/*.zip
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -79,25 +79,41 @@ npm start
 
 ### Option 3 — Standalone Offline Desktop App (Windows / macOS / Linux)
 
-CortexMD can run completely standalone and 100% offline as a desktop application (powered by Electron + embedded Next.js standalone + SQLite):
+CortexMD runs completely standalone and 100% offline as a cross-platform desktop application (powered by Electron + embedded Next.js standalone + SQLite):
 
 - **Zero Docker, zero external server needed.**
+- **Zero API Keys required:** No third-party accounts, no credit cards, and no personal notes ever leave your machine.
 - **Automatic single-user login:** Opens directly into your personal workspace without password prompts.
 - **Native OS Vault location:** Stores your Markdown notes directly in `Documents/CortexMD/vaults/` so you can view, edit, or back them up anytime with any tool.
-- **Verkenner / Explorer Integration:** Native desktop menu option (`Bestand -> Open Kluis in Verkenner` or `Ctrl+O`) opens your vault directory in Windows Explorer.
+- **OS File Explorer Integration:** Native desktop menu option (`Bestand -> Open Kluis in Verkenner` or `Ctrl+O`) opens your vault directory directly in Windows Explorer, macOS Finder, or Linux file manager.
 
 **1. Run the desktop app locally:**
 ```bash
 npm run desktop
 ```
 
-**2. Build Windows executable / installer (.exe & .zip):**
+**2. Build desktop packages for your operating system:**
 ```bash
 npm run build:desktop
-# Build standalone Windows distribution (.zip with CortexMD.exe)
+
+# Windows (.exe installer & standalone .zip)
 npm run dist:win
+
+# macOS (.dmg & .zip for Apple Silicon & Intel)
+npm run dist:mac
+
+# Linux (.AppImage, .deb, and .tar.gz)
+npm run dist:linux
 ```
-The packaged standalone Windows app will be placed in `dist/CortexMD-1.0.0-win.zip` and `dist/win-unpacked/CortexMD.exe`. Extract and double-click `CortexMD.exe` to start!
+
+---
+
+### Mobile & Android Experience (PWA vs APK)
+
+CortexMD comes equipped with an offline-capable **Progressive Web App (PWA)**:
+- **No side-loading or APK signing needed:** Simply visit your CortexMD server or local instance in Chrome or Firefox on Android (or Safari on iOS) and tap **"Install App"** / **"Add to Home Screen"**.
+- It creates a native app icon in your app launcher, launches full-screen without browser bars, and caches your notes offline using IndexedDB.
+- Supports the native **Web Share Target API** and Quick Capture webhook (`/api/capture`) from Android share intents or automation shortcuts.
 
 ---
 

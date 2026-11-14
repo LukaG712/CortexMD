@@ -34,5 +34,36 @@
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "CortexMD"
+  },
+  "mac": {
+    "category": "public.app-category.productivity",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ]
+  },
+  "linux": {
+    "category": "Office",
+    "maintainer": "LukaG712 <dev@cortexmd.local>",
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64"]
+      },
+      {
+        "target": "tar.gz",
+        "arch": ["x64"]
+      }
+    ]
   }
 }

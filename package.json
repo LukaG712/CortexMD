@@ -1,6 +1,11 @@
 {
   "name": "cortexmd",
   "version": "1.0.0",
+  "description": "Self-hosted, offline-first Markdown knowledge base and smart vault",
+  "author": {
+    "name": "LukaG712",
+    "email": "dev@cortexmd.local"
+  },
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -9,6 +14,9 @@
     "build:desktop": "next build && node scripts/prepare-standalone.js",
     "desktop": "node scripts/prepare-standalone.js && electron .",
     "dist:win": "npm run build:desktop && electron-builder --win",
+    "dist:mac": "npm run build:desktop && electron-builder --mac",
+    "dist:linux": "npm run build:desktop && electron-builder --linux",
+    "dist:all": "npm run build:desktop && electron-builder -mwl",
     "dist:dir": "npm run build:desktop && electron-builder --dir",
     "start": "next start",
     "lint": "tsc --noEmit",
