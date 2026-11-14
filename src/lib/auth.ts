@@ -164,6 +164,25 @@ export function getSessionFromRequest(req: NextRequest): AuthSession | null {
     }
   }
 
+  // Standalone offline desktop mode: automatically authenticate as the local admin
+  if (
+    process.env.STANDALONE_DESKTOP === "true" ||
+    process.env.DESKTOP_AUTO_LOGIN === "true"
+  ) {
+    const admin = db
+      .prepare("SELECT id, username, role FROM users WHERE role = 'admin' LIMIT 1")
+      .get() as { id: string; username: string; role: string } | undefined;
+    if (admin) {
+      return {
+        userId: admin.id,
+        username: admin.username,
+        role: admin.role,
+        csrfToken: "desktop-standalone-csrf",
+        tokenHash: "desktop-standalone-token",
+      };
+    }
+  }
+
   const rawCookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!rawCookie) return null;
 
@@ -214,7 +233,8 @@ export function requireAuth(
   if (
     mutating &&
     options?.requireCsrf !== false &&
-    session.csrfToken !== "proxy-oauth"
+    session.csrfToken !== "proxy-oauth" &&
+    session.csrfToken !== "desktop-standalone-csrf"
   ) {
     const headerToken = req.headers.get("x-csrf-token");
     if (!headerToken || headerToken !== session.csrfToken) {

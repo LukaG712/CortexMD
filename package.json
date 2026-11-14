@@ -2,9 +2,14 @@
   "name": "cortexmd",
   "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:desktop": "next build && node scripts/prepare-standalone.js",
+    "desktop": "node scripts/prepare-standalone.js && electron .",
+    "dist:win": "npm run build:desktop && electron-builder --win",
+    "dist:dir": "npm run build:desktop && electron-builder --dir",
     "start": "next start",
     "lint": "tsc --noEmit",
     "test": "vitest run"
@@ -22,8 +27,11 @@
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wait-on": "^9.5.1"
   }
 }

@@ -77,6 +77,30 @@ npm start
 
 ---
 
+### Option 3 — Standalone Offline Desktop App (Windows / macOS / Linux)
+
+CortexMD can run completely standalone and 100% offline as a desktop application (powered by Electron + embedded Next.js standalone + SQLite):
+
+- **Zero Docker, zero external server needed.**
+- **Automatic single-user login:** Opens directly into your personal workspace without password prompts.
+- **Native OS Vault location:** Stores your Markdown notes directly in `Documents/CortexMD/vaults/` so you can view, edit, or back them up anytime with any tool.
+- **Verkenner / Explorer Integration:** Native desktop menu option (`Bestand -> Open Kluis in Verkenner` or `Ctrl+O`) opens your vault directory in Windows Explorer.
+
+**1. Run the desktop app locally:**
+```bash
+npm run desktop
+```
+
+**2. Build Windows executable / installer (.exe & .zip):**
+```bash
+npm run build:desktop
+# Build standalone Windows distribution (.zip with CortexMD.exe)
+npm run dist:win
+```
+The packaged standalone Windows app will be placed in `dist/CortexMD-1.0.0-win.zip` and `dist/win-unpacked/CortexMD.exe`. Extract and double-click `CortexMD.exe` to start!
+
+---
+
 ## Markdown & Keyboard Cheatsheet
 
 ### Keyboard Shortcuts

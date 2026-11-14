@@ -39,6 +39,7 @@ import {
 
 // API Route handlers
 import { GET as healthGet } from "@/app/api/health/route";
+import { GET as authMeGet } from "@/app/api/auth/me/route";
 import { POST as loginPost } from "@/app/api/auth/login/route";
 import { POST as importPost } from "@/app/api/workspaces/import/route";
 import { GET as exportGet } from "@/app/api/workspaces/[slug]/export/route";
@@ -1471,4 +1472,29 @@ describe("CortexMD End-to-End Platform Verification", () => {
     expect(mergedContext).toContain("Second contiguous paragraph content.");
     expect(mergedContext.match(/<untrusted_note_data/g)?.length).toBe(1);
   });
+
+  it("20. Standalone Offline Desktop Mode automatically authenticates as local admin without password prompt", async () => {
+    // Without STANDALONE_DESKTOP: unauthenticated request to /api/auth/me returns authenticated: false
+    const unauthReq = new NextRequest("http://127.0.0.1:3000/api/auth/me");
+    const unauthRes = await authMeGet(unauthReq);
+    const unauthJson = await unauthRes.json();
+    expect(unauthJson.authenticated).toBe(false);
+
+    // With STANDALONE_DESKTOP="true": automatically resolves admin session
+    process.env.STANDALONE_DESKTOP = "true";
+    try {
+      const desktopReq = new NextRequest("http://127.0.0.1:3000/api/auth/me");
+      const desktopRes = await authMeGet(desktopReq);
+      const desktopJson = await desktopRes.json();
+
+      expect(desktopRes.status).toBe(200);
+      expect(desktopJson.authenticated).toBe(true);
+      expect(desktopJson.user.username).toBe("admin");
+      expect(desktopJson.user.role).toBe("admin");
+      expect(desktopJson.csrfToken).toBe("desktop-standalone-csrf");
+    } finally {
+      delete process.env.STANDALONE_DESKTOP;
+    }
+  });
 });
+
