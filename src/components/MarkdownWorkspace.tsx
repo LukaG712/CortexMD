@@ -494,6 +494,30 @@ export function MarkdownWorkspace({
     Record<number, "local" | "server" | "both">
   >({});
 
+  // Pentagram editorial typography mode (serif headings + 68ch measure)
+  const [editorialTypography, setEditorialTypography] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("cortexmd_editorial_typo_v1");
+      if (saved === "true") setEditorialTypography(true);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  function toggleEditorialTypography() {
+    setEditorialTypography((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("cortexmd_editorial_typo_v1", next ? "true" : "false");
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }
+
   const mergeHunks = useMemo(() => {
     if (!conflict) return [];
     const localBlocks = conflict.localContent.split(/\n{2,}/);
@@ -1123,7 +1147,7 @@ export function MarkdownWorkspace({
                   key={m.id}
                   type="button"
                   onClick={() => setViewMode(m.id)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md transition cursor-pointer ${
+                  className={`framer-press inline-flex items-center gap-1 px-2 py-1 rounded-md transition cursor-pointer ${
                     viewMode === m.id
                       ? "bg-zinc-800 text-zinc-100 font-medium"
                       : "text-zinc-400 hover:text-zinc-200"
@@ -1135,12 +1159,25 @@ export function MarkdownWorkspace({
               );
             })}
           </div>
+          <button
+            type="button"
+            onClick={toggleEditorialTypography}
+            title="Toggle Pentagram Editorial Serif Typography"
+            aria-pressed={editorialTypography}
+            className={`framer-press inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-serif transition cursor-pointer ${
+              editorialTypography
+                ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300 font-semibold"
+                : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
+            }`}
+          >
+            <span>Aa</span>
+          </button>
 
           <button
             type="button"
             onClick={() => onSaveNow()}
             title="Save (Ctrl+S)"
-            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium border transition cursor-pointer ${
+            className={`framer-press inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium border transition cursor-pointer ${
               dirty
                 ? "bg-emerald-600 text-zinc-950 border-emerald-500 hover:bg-emerald-500"
                 : "bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800"
@@ -1624,7 +1661,9 @@ export function MarkdownWorkspace({
                 }`}
               >
                 <div
-                  className="cortex-prose max-w-3xl mx-auto"
+                  className={`cortex-prose max-w-3xl mx-auto ${
+                    editorialTypography ? "cortex-prose-editorial" : ""
+                  }`}
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
                 {hoveredWikiPreview && (

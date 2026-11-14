@@ -6,6 +6,7 @@ import { requireAuth, requireWorkspaceRole } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { broadcastEvent } from "@/lib/events";
 import {
+  buildLocalNoteGraph,
   buildWorkspaceGraph,
   ensureAllWorkspacesIndexed,
   extractWorkspaceTasks,
@@ -176,18 +177,7 @@ export async function GET(req: NextRequest) {
       )
       .all(note.id);
 
-    const fullGraph = buildWorkspaceGraph(ws.id);
-    const neighborIds = new Set<string>([note.id]);
-    for (const edge of fullGraph.edges) {
-      if (edge.source === note.id) neighborIds.add(edge.target);
-      if (edge.target === note.id) neighborIds.add(edge.source);
-    }
-    const localGraph = {
-      nodes: fullGraph.nodes.filter((n) => neighborIds.has(n.id)),
-      edges: fullGraph.edges.filter(
-        (e) => neighborIds.has(e.source) && neighborIds.has(e.target),
-      ),
-    };
+    const localGraph = buildLocalNoteGraph(ws.id, note.id);
 
     const transclusionTargets = parseTransclusionTargets(note.body);
     const transclusions: Record<
@@ -954,6 +944,13 @@ export async function PUT(req: NextRequest) {
       auth.session.username,
       Date.now(),
     );
+    db.prepare(
+      `DELETE FROM note_versions
+       WHERE note_id = ?
+         AND id NOT IN (
+           SELECT id FROM note_versions WHERE note_id = ? ORDER BY created_at DESC LIMIT 50
+         )`,
+    ).run(note.id, note.id);
   }
 
   writeMarkdownFile(ws.root_path, note.rel_path, body.content);

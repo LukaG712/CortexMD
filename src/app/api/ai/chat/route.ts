@@ -105,12 +105,39 @@ export async function POST(req: NextRequest) {
     ).run(providerId, now, conversationId);
   }
 
+  const priorHistoryRows = db
+    .prepare(
+      `SELECT role, content
+       FROM ai_messages
+       WHERE conversation_id = ? AND role IN ('user', 'assistant')
+       ORDER BY created_at DESC
+       LIMIT 4`,
+    )
+    .all(conversationId) as Array<{ role: "user" | "assistant"; content: string }>;
+  const history = priorHistoryRows.reverse();
+
   db.prepare(
     `INSERT INTO ai_messages (id, conversation_id, role, content, citations_json, tool_proposals_json, created_at)
      VALUES (?, ?, 'user', ?, '[]', '[]', ?)`,
   ).run(crypto.randomUUID(), conversationId, prompt, now);
 
-  const citations = retrieveGroundedChunks(prompt, {
+  let retrievalQuery = prompt;
+  if (prompt.length < 45 && history.length > 0) {
+    const prevUser = [...history].reverse().find((h) => h.role === "user");
+    if (prevUser) {
+      const carryTerms = prevUser.content
+        .toLowerCase()
+        .replace(/[^a-z0-9\s_-]/g, " ")
+        .split(/\s+/)
+        .filter((t) => t.length >= 4)
+        .slice(0, 5);
+      if (carryTerms.length > 0) {
+        retrievalQuery = `${prompt} ${carryTerms.join(" ")}`;
+      }
+    }
+  }
+
+  const citations = retrieveGroundedChunks(retrievalQuery, {
     mode: scopeMode,
     workspaceId: ws.id,
     folderPrefix: body.folderPrefix,
@@ -147,6 +174,7 @@ export async function POST(req: NextRequest) {
         systemPrompt,
         userPrompt: prompt,
         contextBlock,
+        history,
       });
       answerText = resp.text;
       modelUsed = resp.modelUsed;

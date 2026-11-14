@@ -124,6 +124,7 @@ export function createSession(userId: string): {
   const csrfToken = crypto.randomBytes(24).toString("hex");
   const now = Date.now();
   const expiresAt = now + SESSION_TTL_MS;
+  db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(now);
   db.prepare(
     "INSERT INTO sessions (token_hash, user_id, csrf_token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
   ).run(hashToken(rawToken), userId, csrfToken, expiresAt, now);

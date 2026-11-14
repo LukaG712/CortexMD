@@ -12,6 +12,7 @@ import {
   resolveVaultPath,
 } from "./storage";
 import {
+  clearEmbeddingCache,
   computeLocalEmbedding,
   cosineSimilarity,
   explainSharedConcepts,
@@ -68,6 +69,61 @@ export interface ParsedMarkdown {
 
 const watchers = new Map<string, fs.FSWatcher>();
 const debounceTimers = new Map<string, NodeJS.Timeout>();
+let lastFullReconcileAt = 0;
+let lastReconcileDir = "";
+
+/** Clear cached full-disk reconcile timestamp so the next index check walks immediately. */
+export function invalidateWorkspaceIndexCache(): void {
+  lastFullReconcileAt = 0;
+}
+
+function splitSectionIntoChunks(
+  lines: string[],
+  startLine: number,
+  endLine: number,
+  heading: string,
+  startChunkIndex: number,
+): ParsedChunk[] {
+  const out: ParsedChunk[] = [];
+  let curStart = startLine;
+  let buf: string[] = [];
+  let bufLen = 0;
+
+  for (let ln = startLine; ln <= endLine; ln++) {
+    const line = lines[ln - 1] ?? "";
+    const addLen = line.length + (buf.length > 0 ? 1 : 0);
+    if (buf.length > 0 && bufLen + addLen > 1800) {
+      const content = buf.join("\n").trim();
+      if (content) {
+        out.push({
+          chunkIndex: startChunkIndex + out.length,
+          heading,
+          startLine: curStart,
+          endLine: ln - 1,
+          content: content.slice(0, 2400),
+        });
+      }
+      curStart = ln;
+      buf = [line];
+      bufLen = line.length;
+    } else {
+      buf.push(line);
+      bufLen += addLen;
+    }
+  }
+
+  const tail = buf.join("\n").trim();
+  if (tail) {
+    out.push({
+      chunkIndex: startChunkIndex + out.length,
+      heading,
+      startLine: curStart,
+      endLine,
+      content: tail.slice(0, 2400),
+    });
+  }
+  return out;
+}
 
 function slugifyHeading(text: string): string {
   return text
@@ -195,42 +251,40 @@ export function parseMarkdownDocument(relPath: string, rawContent: string): Pars
     }
   }
 
-  // Build heading-aligned RAG chunks with exact line numbers
+  // Build heading-aligned RAG chunks with exact line numbers and sub-chunking for long sections
   const chunks: ParsedChunk[] = [];
   if (headings.length === 0) {
-    const content = rawContent.trim();
-    if (content) {
-      chunks.push({
-        chunkIndex: 0,
-        heading: getTitleFromRelPath(relPath),
-        startLine: 1,
-        endLine: lines.length,
-        content: content.slice(0, 2400),
-      });
-    }
+    chunks.push(
+      ...splitSectionIntoChunks(
+        lines,
+        1,
+        Math.max(1, lines.length),
+        getTitleFromRelPath(relPath),
+        0,
+      ),
+    );
   } else {
     if (headings[0].startLine > 1) {
-      const intro = lines.slice(0, headings[0].startLine - 1).join("\n").trim();
-      if (intro) {
-        chunks.push({
-          chunkIndex: 0,
-          heading: "Overview",
-          startLine: 1,
-          endLine: headings[0].startLine - 1,
-          content: intro.slice(0, 2400),
-        });
-      }
+      chunks.push(
+        ...splitSectionIntoChunks(
+          lines,
+          1,
+          headings[0].startLine - 1,
+          "Overview",
+          chunks.length,
+        ),
+      );
     }
     for (const h of headings) {
-      const slice = lines.slice(h.startLine - 1, h.endLine).join("\n").trim();
-      if (!slice) continue;
-      chunks.push({
-        chunkIndex: chunks.length,
-        heading: h.text,
-        startLine: h.startLine,
-        endLine: h.endLine,
-        content: slice.slice(0, 2400),
-      });
+      chunks.push(
+        ...splitSectionIntoChunks(
+          lines,
+          h.startLine,
+          h.endLine,
+          h.text,
+          chunks.length,
+        ),
+      );
     }
   }
 
@@ -342,28 +396,58 @@ export function extractFlashcardsFromMarkdown(rawContent: string): ParsedFlashca
   return cards;
 }
 
-/** Resolve [[WikiLink]] target_note_id references across all notes in a workspace. */
+/** Resolve [[WikiLink]] target_note_id references across a workspace with folder-proximity preference. */
 export function resolveWorkspaceLinkTargets(workspaceId: string): void {
   const db = getDb();
   const notes = db
-    .prepare("SELECT id, rel_path, title FROM notes WHERE workspace_id = ? AND is_trashed = 0")
-    .all(workspaceId) as Array<{ id: string; rel_path: string; title: string }>;
+    .prepare("SELECT id, rel_path, folder, title FROM notes WHERE workspace_id = ? AND is_trashed = 0")
+    .all(workspaceId) as Array<{ id: string; rel_path: string; folder: string; title: string }>;
 
-  const lookup = new Map<string, string>();
+  const byRelPath = new Map<string, string>();
+  const byFolderAndKey = new Map<string, string>();
+  const byGlobalKey = new Map<string, string>();
+
   for (const n of notes) {
-    lookup.set(normalizeLinkTarget(n.rel_path), n.id);
-    lookup.set(normalizeLinkTarget(getTitleFromRelPath(n.rel_path)), n.id);
-    lookup.set(normalizeLinkTarget(n.title), n.id);
+    const relNorm = normalizeLinkTarget(n.rel_path);
+    const stemNorm = normalizeLinkTarget(getTitleFromRelPath(n.rel_path));
+    const titleNorm = normalizeLinkTarget(n.title);
+    const folderLower = (n.folder || "").toLowerCase();
+
+    byRelPath.set(relNorm, n.id);
+    byFolderAndKey.set(`${folderLower}::${stemNorm}`, n.id);
+    byFolderAndKey.set(`${folderLower}::${titleNorm}`, n.id);
+    if (!byGlobalKey.has(stemNorm)) byGlobalKey.set(stemNorm, n.id);
+    if (!byGlobalKey.has(titleNorm)) byGlobalKey.set(titleNorm, n.id);
   }
 
   const links = db
-    .prepare("SELECT id, target_norm FROM note_links WHERE workspace_id = ?")
-    .all(workspaceId) as Array<{ id: string; target_norm: string }>;
+    .prepare("SELECT id, source_path, target_norm, target_note_id FROM note_links WHERE workspace_id = ?")
+    .all(workspaceId) as Array<{
+    id: string;
+    source_path: string;
+    target_norm: string;
+    target_note_id: string | null;
+  }>;
 
   const updateStmt = db.prepare("UPDATE note_links SET target_note_id = ? WHERE id = ?");
-  for (const link of links) {
-    const resolved = lookup.get(link.target_norm) || null;
-    updateStmt.run(resolved, link.id);
+  db.exec("BEGIN");
+  try {
+    for (const link of links) {
+      const sourceDir = path.posix.dirname(link.source_path);
+      const sourceFolder = sourceDir === "." ? "" : sourceDir.toLowerCase();
+      const resolved =
+        byRelPath.get(link.target_norm) ||
+        byFolderAndKey.get(`${sourceFolder}::${link.target_norm}`) ||
+        byGlobalKey.get(link.target_norm) ||
+        null;
+      if (resolved !== link.target_note_id) {
+        updateStmt.run(resolved, link.id);
+      }
+    }
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
   }
 }
 
@@ -371,7 +455,7 @@ export function resolveWorkspaceLinkTargets(workspaceId: string): void {
 export function indexSingleFile(
   workspaceId: string,
   relPathInput: string,
-  options?: { force?: boolean },
+  options?: { force?: boolean; skipLinkResolution?: boolean },
 ): string | null {
   const db = getDb();
   const ws = db
@@ -548,12 +632,20 @@ export function indexSingleFile(
     throw err;
   }
 
-  resolveWorkspaceLinkTargets(workspaceId);
+  clearEmbeddingCache();
+  invalidateWorkspaceIndexCache();
+  if (!options?.skipLinkResolution) {
+    resolveWorkspaceLinkTargets(workspaceId);
+  }
   return noteId;
 }
 
 /** Remove a deleted Markdown file from all index tables. */
-export function removeFileFromIndex(workspaceId: string, relPathInput: string): void {
+export function removeFileFromIndex(
+  workspaceId: string,
+  relPathInput: string,
+  options?: { skipLinkResolution?: boolean },
+): void {
   const db = getDb();
   const relPath = normalizeRelPath(relPathInput);
   const existing = db
@@ -563,7 +655,11 @@ export function removeFileFromIndex(workspaceId: string, relPathInput: string): 
 
   db.prepare("DELETE FROM notes_fts WHERE note_id = ?").run(existing.id);
   db.prepare("DELETE FROM notes WHERE id = ?").run(existing.id);
-  resolveWorkspaceLinkTargets(workspaceId);
+  clearEmbeddingCache();
+  invalidateWorkspaceIndexCache();
+  if (!options?.skipLinkResolution) {
+    resolveWorkspaceLinkTargets(workspaceId);
+  }
 }
 
 /** Reconcile disk Markdown files with SQLite index incrementally (skipping unchanged SHA-256 files). */
@@ -594,7 +690,7 @@ export function reconcileWorkspace(workspaceId: string): {
   let removed = 0;
   for (const row of dbRows) {
     if (!diskSet.has(row.rel_path)) {
-      removeFileFromIndex(workspaceId, row.rel_path);
+      removeFileFromIndex(workspaceId, row.rel_path, { skipLinkResolution: true });
       removed++;
     }
   }
@@ -607,24 +703,34 @@ export function reconcileWorkspace(workspaceId: string): {
     const stat = fs.statSync(fullPath);
     const mtimeMs = Math.round(stat.mtimeMs);
     if (!existing || existing.mtime_ms !== mtimeMs) {
-      indexSingleFile(workspaceId, relPath);
+      indexSingleFile(workspaceId, relPath, { skipLinkResolution: true });
       indexed++;
     }
   }
 
-  resolveWorkspaceLinkTargets(workspaceId);
+  if (indexed > 0 || removed > 0) {
+    resolveWorkspaceLinkTargets(workspaceId);
+  }
   startWorkspaceWatcher(ws.id, ws.root_path, ws.slug);
   return { indexed, removed, total: diskFiles.length };
 }
 
-/** Ensure seed workspaces exist and every workspace is reconciled & watched. */
-export function ensureAllWorkspacesIndexed(): void {
+/** Ensure seed workspaces exist and every workspace is reconciled & watched (with cooldown throttling). */
+export function ensureAllWorkspacesIndexed(force = false): void {
+  const dataDir = process.env.CORTEX_DATA_DIR || "";
+  const ttlMs = process.env.NODE_ENV === "test" ? 0 : 2500;
+  if (!force && ttlMs > 0 && lastReconcileDir === dataDir && Date.now() - lastFullReconcileAt < ttlMs) {
+    return;
+  }
+
   ensureSeedWorkspaces();
   const db = getDb();
   const rows = db.prepare("SELECT id FROM workspaces").all() as Array<{ id: string }>;
   for (const row of rows) {
     reconcileWorkspace(row.id);
   }
+  lastReconcileDir = dataDir;
+  lastFullReconcileAt = Date.now();
 }
 
 /** Attach a debounced filesystem watcher to detect out-of-band .md edits on disk. */
@@ -643,6 +749,7 @@ export function startWorkspaceWatcher(
         const rel = filename.replaceAll("\\", "/");
         if (!rel.toLowerCase().endsWith(".md") || rel.startsWith(".")) return;
 
+        invalidateWorkspaceIndexCache();
         const key = `${workspaceId}:${rel}`;
         const prev = debounceTimers.get(key);
         if (prev) clearTimeout(prev);
@@ -892,6 +999,101 @@ export function findShortestNotePath(
   }
 
   return [];
+}
+
+/** Build a fast 1-hop local graph for a single note without scanning workspace bodies or clusters. */
+export function buildLocalNoteGraph(
+  workspaceId: string,
+  noteId: string,
+): {
+  nodes: Array<{
+    id: string;
+    relPath: string;
+    title: string;
+    folder: string;
+    objectType: string;
+    tags: string[];
+    degree: number;
+    isOrphan: boolean;
+  }>;
+  edges: Array<{
+    source: string;
+    target: string;
+    label: string;
+  }>;
+} {
+  const db = getDb();
+  const touchingLinks = db
+    .prepare(
+      `SELECT source_note_id, target_note_id, target_raw
+       FROM note_links
+       WHERE workspace_id = ? AND target_note_id IS NOT NULL
+         AND (source_note_id = ? OR target_note_id = ?)`,
+    )
+    .all(workspaceId, noteId, noteId) as Array<{
+    source_note_id: string;
+    target_note_id: string;
+    target_raw: string;
+  }>;
+
+  const neighborIds = new Set<string>([noteId]);
+  const edgeKeys = new Set<string>();
+  const edges: Array<{ source: string; target: string; label: string }> = [];
+  const degreeMap = new Map<string, number>();
+
+  for (const l of touchingLinks) {
+    if (l.source_note_id === l.target_note_id) continue;
+    neighborIds.add(l.source_note_id);
+    neighborIds.add(l.target_note_id);
+    const key = `${l.source_note_id}->${l.target_note_id}`;
+    if (!edgeKeys.has(key)) {
+      edgeKeys.add(key);
+      edges.push({
+        source: l.source_note_id,
+        target: l.target_note_id,
+        label: l.target_raw,
+      });
+      degreeMap.set(l.source_note_id, (degreeMap.get(l.source_note_id) || 0) + 1);
+      degreeMap.set(l.target_note_id, (degreeMap.get(l.target_note_id) || 0) + 1);
+    }
+  }
+
+  const idList = Array.from(neighborIds);
+  const placeholders = idList.map(() => "?").join(", ");
+  const noteRows = db
+    .prepare(
+      `SELECT id, rel_path, title, folder, object_type, tags_json
+       FROM notes
+       WHERE workspace_id = ? AND is_trashed = 0 AND id IN (${placeholders})`,
+    )
+    .all(workspaceId, ...idList) as Array<{
+    id: string;
+    rel_path: string;
+    title: string;
+    folder: string;
+    object_type: string;
+    tags_json: string;
+  }>;
+
+  const activeIdSet = new Set(noteRows.map((r) => r.id));
+  const nodes = noteRows.map((n) => {
+    const degree = degreeMap.get(n.id) || 0;
+    return {
+      id: n.id,
+      relPath: n.rel_path,
+      title: n.title,
+      folder: n.folder || "(root)",
+      objectType: n.object_type,
+      tags: JSON.parse(n.tags_json || "[]") as string[],
+      degree,
+      isOrphan: degree === 0,
+    };
+  });
+
+  return {
+    nodes,
+    edges: edges.filter((e) => activeIdSet.has(e.source) && activeIdSet.has(e.target)),
+  };
 }
 
 /** Build the interactive node/edge graph for a workspace, including semantic ghost edges, topic clusters, and optional shortest path. */

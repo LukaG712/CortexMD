@@ -22,6 +22,10 @@ CortexMD runs on your own homelab or Proxmox server as a single lightweight Next
   - Real-time SSE multi-device sync, 3-way hunk-by-hunk merge conflict resolution, snapshot version history, and per-vault Git snapshot commits (`/api/workspaces/[slug]/git`).
   - Installable PWA with IndexedDB offline note mirror, offline command-palette search, Web Share Target, and bearer-token quick-capture webhook (`/api/capture`).
   - Multi-user accounts (`scrypt` passwords, HttpOnly sessions, CSRF protection) with per-workspace `admin` / `editor` / `viewer` RBAC roles.
+- **Refined Workspace Craft & Engine Performance:**
+  - **Dual Theme & Typography:** Switch anytime between **Obsidian Dark** and warm alabaster **Paper** theme, toggle **Pentagram `Aa` Editorial Serif** reading mode (`68ch` measure), and enter **Zen Focus** mode with a single click.
+  - **Home Dashboard, Quest & Faceted Search:** **Notion-style Vault Home Dashboard** (`Home` view) with KPI stats, Quick Capture bar, Daily Streak tracker, and a 5-step interactive onboarding quest; **Airbnb-style faceted `Ctrl+K` Command Palette** (`mode`, `type`, `folder`, `tag`) with a live note inspector.
+  - **Optimized Local AI & Indexing Engine:** Sublinear-TF cached embeddings, weighted FTS5 BM25 ranking, cached per-workspace ACLs, line-preserving >1,800-char chunk splitting, proximity-aware `[[WikiLink]]` target resolution, fast 1-hop local graph queries, and multi-turn conversation history in RAG.
 
 ---
 
@@ -172,7 +176,7 @@ CortexMD works out of the box using its local **`local-hybrid`** engine (zero ex
 ```bash
 npm run dev    # Start Next.js development server
 npm run lint   # Run TypeScript compiler check (tsc --noEmit)
-npm test       # Run Vitest end-to-end test suite (tests/platform.test.ts)
+npm test       # Run Vitest end-to-end test suite (19 tests in tests/platform.test.ts)
 npm run build  # Build production Next.js bundle
 npm start      # Serve production build
 ```

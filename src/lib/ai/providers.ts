@@ -34,6 +34,30 @@ export interface ChatTurnInput {
   systemPrompt: string;
   userPrompt: string;
   contextBlock: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
+}
+
+const CLI_PROBE_TTL_MS = 60_000;
+let cliProbeCache: {
+  ts: number;
+  results: [
+    { ok: boolean; output: string },
+    { ok: boolean; output: string },
+    { ok: boolean; output: string },
+    { ok: boolean; output: string },
+  ];
+} | null = null;
+
+function formatHistoryBlock(
+  history?: Array<{ role: "user" | "assistant"; content: string }>,
+): string {
+  if (!history || history.length === 0) return "";
+  const trimmed = history.slice(-4).map((m) => {
+    const clean = m.content.replace(/\s+/g, " ").trim().slice(0, 280);
+    return `${m.role === "user" ? "User" : "Assistant"}: ${clean}`;
+  });
+  const block = trimmed.join("\n").slice(0, 1200);
+  return block ? `<conversation_history>\n${block}\n</conversation_history>\n\n` : "";
 }
 
 export interface ProviderResponse {
@@ -98,6 +122,7 @@ export function saveProviderConfig(input: {
     input.modelName !== undefined ? input.modelName.trim() : existing?.model_name || "",
     Date.now(),
   );
+  cliProbeCache = null;
 }
 
 async function commandExists(cmd: string, args = ["--version"]): Promise<{ ok: boolean; output: string }> {
@@ -147,12 +172,25 @@ export async function listProviderStatuses(): Promise<ProviderStatus[]> {
   const ollamaModel =
     ollamaCfg?.model_name || process.env.OLLAMA_MODEL?.trim() || "llama3.2";
 
-  const [geminiBin, copilotBin, ghStatus, junieBin] = await Promise.all([
-    commandExists("gemini", ["--version"]),
-    commandExists("copilot", ["--version"]),
-    commandExists("gh", ["auth", "status"]),
-    commandExists("junie", ["--version"]),
-  ]);
+  const nowTs = Date.now();
+  let probes: [
+    { ok: boolean; output: string },
+    { ok: boolean; output: string },
+    { ok: boolean; output: string },
+    { ok: boolean; output: string },
+  ];
+  if (cliProbeCache && nowTs - cliProbeCache.ts < CLI_PROBE_TTL_MS) {
+    probes = cliProbeCache.results;
+  } else {
+    probes = await Promise.all([
+      commandExists("gemini", ["--version"]),
+      commandExists("copilot", ["--version"]),
+      commandExists("gh", ["auth", "status"]),
+      commandExists("junie", ["--version"]),
+    ]);
+    cliProbeCache = { ts: nowTs, results: probes };
+  }
+  const [geminiBin, copilotBin, ghStatus, junieBin] = probes;
 
   let ollamaReachable = false;
   let ollamaModelsList: string[] = [];
@@ -281,6 +319,9 @@ export async function invokeExternalProvider(
   providerId: ProviderId,
   input: ChatTurnInput,
 ): Promise<ProviderResponse> {
+  const historyPrefix = formatHistoryBlock(input.history);
+  const fullUserPrompt = `${historyPrefix}${input.contextBlock}\n\nUser Question: ${input.userPrompt}`;
+
   if (providerId === "gemini-api") {
     const cfg = getStoredConfig("gemini-api");
     const apiKey =
@@ -299,7 +340,7 @@ export async function invokeExternalProvider(
           contents: [
             {
               role: "user",
-              parts: [{ text: `${input.contextBlock}\n\nUser Question: ${input.userPrompt}` }],
+              parts: [{ text: fullUserPrompt }],
             },
           ],
           generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
@@ -331,7 +372,7 @@ export async function invokeExternalProvider(
         stream: false,
         messages: [
           { role: "system", content: input.systemPrompt },
-          { role: "user", content: `${input.contextBlock}\n\nUser Question: ${input.userPrompt}` },
+          { role: "user", content: fullUserPrompt },
         ],
       }),
       signal: AbortSignal.timeout(45000),
@@ -344,7 +385,7 @@ export async function invokeExternalProvider(
   }
 
   if (providerId === "gemini-cli") {
-    const combinedPrompt = `${input.systemPrompt}\n\n${input.contextBlock}\n\nUser Question: ${input.userPrompt}`;
+    const combinedPrompt = `${input.systemPrompt}\n\n${fullUserPrompt}`;
     const { stdout } = await execFileAsync("gemini", ["-p", combinedPrompt], {
       timeout: 35000,
       windowsHide: true,
@@ -362,7 +403,7 @@ export async function invokeExternalProvider(
       "";
     const env = { ...process.env };
     if (token) env.COPILOT_GITHUB_TOKEN = token;
-    const combinedPrompt = `${input.systemPrompt}\n\n${input.contextBlock}\n\nUser Question: ${input.userPrompt}`;
+    const combinedPrompt = `${input.systemPrompt}\n\n${fullUserPrompt}`;
     const { stdout } = await execFileAsync("copilot", ["-p", combinedPrompt], {
       timeout: 35000,
       windowsHide: true,
@@ -380,7 +421,7 @@ export async function invokeExternalProvider(
       process.env.JUNIE_API_KEY?.trim() ||
       "";
     if (!token) throw new Error("Junie CLI requires JUNIE_API_KEY.");
-    const combinedPrompt = `${input.systemPrompt}\n\n${input.contextBlock}\n\nUser Question: ${input.userPrompt}`;
+    const combinedPrompt = `${input.systemPrompt}\n\n${fullUserPrompt}`;
     const { stdout } = await execFileAsync("junie", [`--auth=${token}`, combinedPrompt], {
       timeout: 45000,
       windowsHide: true,

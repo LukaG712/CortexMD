@@ -91,13 +91,15 @@ export function deleteFolderPermission(workspaceId: string, ruleId: string): voi
 }
 
 /**
- * Check if a relative note path is allowed for AI read/write operations.
+ * Evaluate preloaded folder ACL rules against a relative note path.
  * Most specific matching prefix wins; `deny` wins on tie. Default is `allow`.
  */
-export function isPathPermittedForAi(workspaceId: string, relPath: string): boolean {
-  const cleanPath = relPath.replaceAll("\\", "/").replace(/^\/+/, "").toLowerCase();
-  const rules = listFolderPermissions(workspaceId);
+export function evaluateFolderPermissionRules(
+  rules: FolderPermissionRule[],
+  relPath: string,
+): boolean {
   if (rules.length === 0) return true;
+  const cleanPath = relPath.replaceAll("\\", "/").replace(/^\/+/, "").toLowerCase();
 
   let bestLen = -1;
   let decision: "allow" | "deny" = "allow";
@@ -119,4 +121,27 @@ export function isPathPermittedForAi(workspaceId: string, relPath: string): bool
   }
 
   return decision === "allow";
+}
+
+/**
+ * Create a per-operation cached ACL checker so filtering many chunks runs 1 SQL query per workspace.
+ */
+export function createWorkspaceAclChecker(): (workspaceId: string, relPath: string) => boolean {
+  const rulesByWorkspace = new Map<string, FolderPermissionRule[]>();
+  return (workspaceId: string, relPath: string): boolean => {
+    let rules = rulesByWorkspace.get(workspaceId);
+    if (!rules) {
+      rules = listFolderPermissions(workspaceId);
+      rulesByWorkspace.set(workspaceId, rules);
+    }
+    return evaluateFolderPermissionRules(rules, relPath);
+  };
+}
+
+/**
+ * Check if a relative note path is allowed for AI read/write operations.
+ * Most specific matching prefix wins; `deny` wins on tie. Default is `allow`.
+ */
+export function isPathPermittedForAi(workspaceId: string, relPath: string): boolean {
+  return evaluateFolderPermissionRules(listFolderPermissions(workspaceId), relPath);
 }

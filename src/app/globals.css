@@ -12,6 +12,21 @@
   --text-muted: #71717a;
   --accent-emerald: #10b981;
   --accent-blue: #3b82f6;
+  --spring-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root[data-theme="paper"] {
+  --bg-app: #f6f3ec;
+  --bg-surface: #efeae0;
+  --bg-elevated: #e7e0d3;
+  --bg-hover: #ddd4c3;
+  --border-subtle: #d5ccbc;
+  --border-strong: #bfb39e;
+  --text-primary: #1c1b18;
+  --text-secondary: #57534a;
+  --text-muted: #787166;
+  --accent-emerald: #0d6e52;
+  --accent-blue: #2563eb;
 }
 
 * {
@@ -28,6 +43,7 @@ body {
   padding: 0;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 280ms var(--spring-ease), color 220ms ease;
 }
 
 code,
@@ -36,7 +52,72 @@ pre,
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/* Custom sleek dark scrollbars */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Apple-inspired glass & spring physics */
+.apple-glass {
+  background: rgba(17, 17, 20, 0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+:root[data-theme="paper"] .apple-glass {
+  background: rgba(239, 234, 224, 0.86);
+}
+
+.apple-spring {
+  transition:
+    transform 300ms var(--spring-ease),
+    opacity 240ms var(--spring-ease),
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 260ms var(--spring-ease);
+}
+
+/* Framer-inspired tactile micro-interactions */
+.framer-press {
+  transition:
+    transform 180ms var(--spring-ease),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 180ms ease;
+}
+
+.framer-press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apple-spring,
+  .framer-press {
+    transition: none !important;
+  }
+  .framer-press:active:not(:disabled) {
+    transform: none !important;
+  }
+}
+
+/* Aesop / Muji specimen header label */
+.specimen-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Stripe-inspired subtle layered radial mesh */
+.stripe-mesh-bg {
+  background-image:
+    radial-gradient(at 15% 15%, rgba(16, 185, 129, 0.14) 0px, transparent 48%),
+    radial-gradient(at 85% 20%, rgba(59, 130, 246, 0.12) 0px, transparent 46%),
+    radial-gradient(at 50% 90%, rgba(168, 85, 247, 0.08) 0px, transparent 50%);
+}
+
+/* Custom sleek scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -47,12 +128,12 @@ pre,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--border-subtle);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: var(--border-strong);
 }
 
 /* Clean Markdown Prose Styling */
@@ -60,6 +141,31 @@ pre,
   color: #e4e4e7;
   font-size: 0.96rem;
   line-height: 1.72;
+}
+
+/* Pentagram editorial reading measure & serif pairing */
+.cortex-prose-editorial {
+  max-width: 68ch;
+  margin-inline: auto;
+  font-size: 1.01rem;
+  line-height: 1.78;
+  font-variant-numeric: tabular-nums;
+}
+
+.cortex-prose-editorial h1,
+.cortex-prose-editorial h2,
+.cortex-prose-editorial h3 {
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+.cortex-prose-editorial h1 {
+  font-size: 2.05rem;
+}
+
+.cortex-prose-editorial h2 {
+  font-size: 1.42rem;
 }
 
 .cortex-prose h1 {
@@ -185,6 +291,7 @@ pre,
   font-size: 0.9em;
   text-decoration: none;
   cursor: pointer;
+  transition: background-color 160ms ease, transform 160ms var(--spring-ease);
 }
 
 .cortex-prose a.wikilink-chip:hover {
@@ -198,7 +305,7 @@ pre,
   margin: 0.75rem 0;
 }
 
-/* Transclusion Cards (Item 1) */
+/* Transclusion Cards */
 .cortex-prose .transclusion-card {
   margin: 0.9rem 0;
   border: 1px solid rgba(16, 185, 129, 0.28);
@@ -236,7 +343,7 @@ pre,
   margin-bottom: 0;
 }
 
-/* Mermaid Diagrams & LaTeX Math (Item 2) */
+/* Mermaid Diagrams & LaTeX Math */
 .cortex-prose .cortex-mermaid-wrap {
   margin: 1rem 0;
   padding: 0.85rem;
@@ -321,7 +428,7 @@ pre,
   font-size: 0.88em;
 }
 
-/* Synchronized Editor Gutter (Item 4) */
+/* Synchronized Editor Gutter */
 .cortex-editor-gutter {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 13px;
@@ -333,4 +440,137 @@ pre,
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 13px;
   line-height: 1.625;
+}
+
+/* =========================================================================
+   Aesop / Muji Warm Alabaster Paper Theme ([data-theme="paper"])
+   Transforms dark Linear Obsidian surfaces into warm unbleached stationery
+   ========================================================================= */
+
+:root[data-theme="paper"] .bg-\[\#09090b\],
+:root[data-theme="paper"] .bg-\[\#0b0b0e\] {
+  background-color: #f6f3ec !important;
+}
+
+:root[data-theme="paper"] .bg-\[\#0d0d11\],
+:root[data-theme="paper"] .bg-\[\#0f0f13\],
+:root[data-theme="paper"] .bg-\[\#111114\],
+:root[data-theme="paper"] .bg-\[\#141418\] {
+  background-color: #efeae0 !important;
+}
+
+:root[data-theme="paper"] .bg-zinc-950,
+:root[data-theme="paper"] .bg-zinc-950\/70,
+:root[data-theme="paper"] .bg-zinc-950\/60,
+:root[data-theme="paper"] .bg-zinc-950\/95 {
+  background-color: #f2ede2 !important;
+}
+
+:root[data-theme="paper"] .bg-zinc-900,
+:root[data-theme="paper"] .bg-zinc-900\/80,
+:root[data-theme="paper"] .bg-zinc-900\/60,
+:root[data-theme="paper"] .bg-zinc-900\/50,
+:root[data-theme="paper"] .bg-zinc-800 {
+  background-color: #e5dec9 !important;
+}
+
+:root[data-theme="paper"] .border-zinc-800,
+:root[data-theme="paper"] .border-zinc-800\/90,
+:root[data-theme="paper"] .border-zinc-800\/80,
+:root[data-theme="paper"] .border-zinc-800\/60,
+:root[data-theme="paper"] .border-zinc-700 {
+  border-color: #d5ccbc !important;
+}
+
+:root[data-theme="paper"] .text-zinc-50,
+:root[data-theme="paper"] .text-zinc-100,
+:root[data-theme="paper"] .text-zinc-200 {
+  color: #1c1b18 !important;
+}
+
+:root[data-theme="paper"] .text-zinc-300 {
+  color: #36332d !important;
+}
+
+:root[data-theme="paper"] .text-zinc-400 {
+  color: #5c574d !important;
+}
+
+:root[data-theme="paper"] .text-zinc-500,
+:root[data-theme="paper"] .text-zinc-600 {
+  color: #787166 !important;
+}
+
+:root[data-theme="paper"] .text-emerald-300,
+:root[data-theme="paper"] .text-emerald-400 {
+  color: #0d6e52 !important;
+}
+
+:root[data-theme="paper"] .cortex-prose {
+  color: #292723;
+}
+
+:root[data-theme="paper"] .cortex-prose h1,
+:root[data-theme="paper"] .cortex-prose h2,
+:root[data-theme="paper"] .cortex-prose h3 {
+  color: #1c1b18;
+  border-bottom-color: #d5ccbc;
+}
+
+:root[data-theme="paper"] .cortex-prose blockquote {
+  color: #3f3b34;
+  border-left-color: #0d6e52;
+  background: rgba(13, 110, 82, 0.06);
+}
+
+:root[data-theme="paper"] .cortex-prose pre {
+  background: #eae3d5;
+  border-color: #d5ccbc;
+}
+
+:root[data-theme="paper"] .cortex-prose pre code {
+  color: #1c1b18;
+}
+
+:root[data-theme="paper"] .cortex-prose code {
+  background: #e5dec9;
+  border-color: #d5ccbc;
+  color: #0d6e52;
+}
+
+:root[data-theme="paper"] .cortex-prose th {
+  background: #e5dec9;
+  color: #1c1b18;
+}
+
+:root[data-theme="paper"] .cortex-prose th,
+:root[data-theme="paper"] .cortex-prose td,
+:root[data-theme="paper"] .cortex-prose hr,
+:root[data-theme="paper"] .cortex-prose img {
+  border-color: #d5ccbc;
+}
+
+:root[data-theme="paper"] .cortex-prose a.wikilink-chip {
+  color: #0d6e52;
+  background: rgba(13, 110, 82, 0.09);
+  border-color: rgba(13, 110, 82, 0.28);
+}
+
+:root[data-theme="paper"] .cortex-prose .transclusion-header {
+  color: #0d6e52;
+  background: rgba(13, 110, 82, 0.1);
+}
+
+:root[data-theme="paper"] .cortex-prose .transclusion-body {
+  color: #36332d;
+}
+
+:root[data-theme="paper"] .cortex-prose .cortex-math-block {
+  background: #eae3d5;
+  border-color: #d5ccbc;
+  color: #1c1b18;
+}
+
+:root[data-theme="paper"] .cortex-prose .cortex-math-inline {
+  color: #0f4c81;
 }

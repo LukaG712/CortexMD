@@ -1,6 +1,6 @@
 const EMBEDDING_DIMS = 384;
 
-const STOPWORDS = new Set([
+export const STOPWORDS = new Set([
   "the", "and", "for", "that", "this", "with", "from", "are", "was", "were",
   "have", "has", "had", "not", "but", "what", "when", "where", "which", "who",
   "how", "why", "all", "any", "can", "will", "just", "into", "your", "our",
@@ -9,6 +9,32 @@ const STOPWORDS = new Set([
   "such", "only", "over", "under", "very", "most", "some", "could", "should",
   "would", "make", "made", "using", "used", "use", "note", "notes",
 ]);
+
+const MAX_VEC_CACHE_SIZE = 5000;
+const parsedVecCache = new Map<string, number[]>();
+
+/** Parse and cache an embedding JSON array to avoid repeated JSON.parse across searches. */
+export function getParsedEmbedding(cacheKey: string, embeddingJson: string): number[] {
+  const cached = parsedVecCache.get(cacheKey);
+  if (cached) return cached;
+  let parsed: number[];
+  try {
+    parsed = JSON.parse(embeddingJson) as number[];
+  } catch {
+    parsed = [];
+  }
+  if (parsedVecCache.size >= MAX_VEC_CACHE_SIZE) {
+    const oldestKey = parsedVecCache.keys().next().value;
+    if (oldestKey !== undefined) parsedVecCache.delete(oldestKey);
+  }
+  parsedVecCache.set(cacheKey, parsed);
+  return parsed;
+}
+
+/** Invalidate cached embedding vectors when notes are re-indexed or removed. */
+export function clearEmbeddingCache(): void {
+  parsedVecCache.clear();
+}
 
 const CONCEPT_CLUSTERS: Record<string, string[]> = {
   containers: [
@@ -147,17 +173,21 @@ export function computeLocalEmbedding(text: string): number[] {
     vec[idx] += sign * weight;
   };
 
+  const stemCounts = new Map<string, number>();
+  const rawCounts = new Map<string, number>();
+  const clusterCounts = new Map<string, number>();
+
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i];
     const stem = lightStem(tok);
-    addFeature(`w:${stem}`, 1.8);
-    addFeature(`r:${tok}`, 0.7);
+    stemCounts.set(stem, (stemCounts.get(stem) ?? 0) + 1);
+    rawCounts.set(tok, (rawCounts.get(tok) ?? 0) + 1);
 
     // Concept cluster expansion so semantically related vocabulary shares signal
     const clusters = TERM_TO_CLUSTER.get(tok) || TERM_TO_CLUSTER.get(stem);
     if (clusters) {
       for (const c of clusters) {
-        addFeature(`k:${c}`, 2.1);
+        clusterCounts.set(c, (clusterCounts.get(c) ?? 0) + 1);
       }
     }
 
@@ -173,6 +203,16 @@ export function computeLocalEmbedding(text: string): number[] {
         addFeature(`c:${padded.slice(j, j + 3)}`, 0.35);
       }
     }
+  }
+
+  for (const [stem, cnt] of stemCounts.entries()) {
+    addFeature(`w:${stem}`, 1.8 * (1 + Math.log(cnt)));
+  }
+  for (const [tok, cnt] of rawCounts.entries()) {
+    addFeature(`r:${tok}`, 0.7 * (1 + Math.log(cnt)));
+  }
+  for (const [c, cnt] of clusterCounts.entries()) {
+    addFeature(`k:${c}`, 2.1 * (1 + Math.log(cnt)));
   }
 
   let normSq = 0;

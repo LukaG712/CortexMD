@@ -14,12 +14,15 @@ import {
 import { resetDbHandle, getDb } from "@/lib/db";
 import { normalizeRelPath, resolveVaultPath } from "@/lib/storage";
 import {
+  buildLocalNoteGraph,
   buildWorkspaceGraph,
   ensureAllWorkspacesIndexed,
   extractWorkspaceTasks,
   findRelatedNotes,
   findUnlinkedMentions,
+  parseMarkdownDocument,
   reconcileWorkspace,
+  resolveWorkspaceLinkTargets,
 } from "@/lib/indexer";
 import { isPathPermittedForAi, setFolderPermission } from "@/lib/ai/acl";
 import { listProviderStatuses, saveProviderConfig } from "@/lib/ai/providers";
@@ -1329,5 +1332,143 @@ describe("CortexMD End-to-End Platform Verification", () => {
       }),
     );
     expect(allowedNote.status).toBe(201);
+  });
+
+  it("19. Splits large sections, resolves proximity links, builds 1-hop local graph, and compacts RAG context", async () => {
+    // 1. Large-section chunk splitting (>2,500 chars under one heading)
+    const longLines = Array.from(
+      { length: 40 },
+      (_, idx) =>
+        `Line ${idx + 1}: Deterministic telemetry packet inspection across Proxmox nodes for throughput testing.`,
+    );
+    const largeDoc = `# Telemetry Overview\n\n${longLines.join("\n")}`;
+    const parsed = parseMarkdownDocument("telemetry-large.md", largeDoc);
+    expect(parsed.chunks.length).toBeGreaterThanOrEqual(2);
+    for (let i = 0; i < parsed.chunks.length; i++) {
+      const ch = parsed.chunks[i];
+      expect(ch.startLine).toBeGreaterThanOrEqual(1);
+      expect(ch.endLine).toBeGreaterThanOrEqual(ch.startLine);
+      if (i > 0) {
+        expect(ch.startLine).toBeGreaterThan(parsed.chunks[i - 1].endLine);
+      }
+    }
+    expect(parsed.chunks[parsed.chunks.length - 1].endLine).toBe(
+      largeDoc.split(/\r?\n/).length,
+    );
+
+    // 2. Proximity-aware [[SharedTarget]] resolution + 1-hop local graph
+    const targetBRes = await notesPost(
+      authedReq("http://localhost:3000/api/notes", {
+        method: "POST",
+        body: {
+          action: "create",
+          workspaceSlug: "personal",
+          folder: "FolderB",
+          title: "SharedTarget",
+          content: "# SharedTarget in FolderB\n\nLinks to [[TwoHopFar]].",
+        },
+      }),
+    );
+    expect(targetBRes.status).toBe(201);
+
+    const farHopRes = await notesPost(
+      authedReq("http://localhost:3000/api/notes", {
+        method: "POST",
+        body: {
+          action: "create",
+          workspaceSlug: "personal",
+          folder: "FolderB",
+          title: "TwoHopFar",
+          content: "# TwoHopFar\n\nNot directly linked from FolderA/Source.",
+        },
+      }),
+    );
+    expect(farHopRes.status).toBe(201);
+    const farHopId = (await farHopRes.json()).note.id as string;
+
+    const targetARes = await notesPost(
+      authedReq("http://localhost:3000/api/notes", {
+        method: "POST",
+        body: {
+          action: "create",
+          workspaceSlug: "personal",
+          folder: "FolderA",
+          title: "SharedTarget",
+          content: "# SharedTarget in FolderA\n\nClose sibling target.",
+        },
+      }),
+    );
+    expect(targetARes.status).toBe(201);
+    const targetAId = (await targetARes.json()).note.id as string;
+
+    const sourceARes = await notesPost(
+      authedReq("http://localhost:3000/api/notes", {
+        method: "POST",
+        body: {
+          action: "create",
+          workspaceSlug: "personal",
+          folder: "FolderA",
+          title: "Source",
+          content: "# Source\n\nSame folder prefers [[SharedTarget]].",
+        },
+      }),
+    );
+    expect(sourceARes.status).toBe(201);
+    const sourceAId = (await sourceARes.json()).note.id as string;
+
+    const db = getDb();
+    const personalWs = db
+      .prepare("SELECT id FROM workspaces WHERE slug = 'personal'")
+      .get() as { id: string };
+    resolveWorkspaceLinkTargets(personalWs.id);
+
+    const resolvedLink = db
+      .prepare(
+        "SELECT target_note_id FROM note_links WHERE source_note_id = ? AND target_raw = 'SharedTarget'",
+      )
+      .get(sourceAId) as { target_note_id: string | null } | undefined;
+    expect(resolvedLink?.target_note_id).toBe(targetAId);
+
+    // 3. Fast 1-hop buildLocalNoteGraph
+    const localGraph = buildLocalNoteGraph(personalWs.id, sourceAId);
+    const localIds = new Set(localGraph.nodes.map((n) => n.id));
+    expect(localIds.has(sourceAId)).toBe(true);
+    expect(localIds.has(targetAId)).toBe(true);
+    expect(localIds.has(farHopId)).toBe(false);
+    expect(
+      localGraph.edges.some((e) => e.source === sourceAId && e.target === targetAId),
+    ).toBe(true);
+
+    // 4. buildUntrustedContextBlock strips YAML frontmatter & merges contiguous same-note chunks
+    const mergedContext = buildUntrustedContextBlock([
+      {
+        noteId: "merge-note-1",
+        workspaceId: personalWs.id,
+        workspaceSlug: "personal",
+        relPath: "FolderA/MergeTest.md",
+        title: "MergeTest",
+        heading: "Intro",
+        startLine: 1,
+        endLine: 6,
+        snippet: "---\ntitle: SecretYamlKey\ntags: [internal]\n---\nFirst paragraph content.",
+        score: 0.95,
+      },
+      {
+        noteId: "merge-note-1",
+        workspaceId: personalWs.id,
+        workspaceSlug: "personal",
+        relPath: "FolderA/MergeTest.md",
+        title: "MergeTest",
+        heading: "Intro",
+        startLine: 7,
+        endLine: 12,
+        snippet: "Second contiguous paragraph content.",
+        score: 0.9,
+      },
+    ]);
+    expect(mergedContext).not.toContain("SecretYamlKey");
+    expect(mergedContext).toContain("First paragraph content.");
+    expect(mergedContext).toContain("Second contiguous paragraph content.");
+    expect(mergedContext.match(/<untrusted_note_data/g)?.length).toBe(1);
   });
 });

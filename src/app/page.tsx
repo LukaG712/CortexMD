@@ -20,12 +20,17 @@ import {
   CloudOff,
   FilePlus2,
   FileText,
+  Flame,
   Folder,
   FolderPlus,
+  Home,
   Kanban,
   LayoutGrid,
   LogOut,
+  Maximize2,
   Menu,
+  Minimize2,
+  Moon,
   Network,
   PanelLeftClose,
   PanelLeftOpen,
@@ -37,6 +42,7 @@ import {
   Settings,
   Sparkles,
   Star,
+  Sun,
   Tag,
   Trash2,
   Upload,
@@ -50,6 +56,7 @@ import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { LoginScreen } from "@/components/LoginScreen";
 import { MarkdownWorkspace } from "@/components/MarkdownWorkspace";
 import { SpatialCanvasView } from "@/components/SpatialCanvasView";
+import { VaultHomeDashboard } from "@/components/VaultHomeDashboard";
 import {
   ImportVaultModal,
   KanbanTasksView,
@@ -101,8 +108,10 @@ export default function CortexMdPage() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [mainView, setMainView] = useState<
-    "notes" | "graph" | "kanban" | "canvas" | "calendar" | "cards"
+    "home" | "notes" | "graph" | "kanban" | "canvas" | "calendar" | "cards"
   >("notes");
+  const [theme, setTheme] = useState<"obsidian" | "paper">("obsidian");
+  const [zenMode, setZenMode] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdInitialQuery, setCmdInitialQuery] = useState("");
   const [savedSearches, setSavedSearches] = useState<SavedSearchItem[]>([]);
@@ -210,17 +219,94 @@ export default function CortexMdPage() {
     }
   }, []);
 
+  // Hydrate and sync Obsidian / Warm Paper theme
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("cortexmd_theme_v1");
+      const next = saved === "paper" ? "paper" : "obsidian";
+      setTheme(next);
+      document.documentElement.dataset.theme = next;
+    } catch {
+      document.documentElement.dataset.theme = "obsidian";
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === "obsidian" ? "paper" : "obsidian";
+      try {
+        window.localStorage.setItem("cortexmd_theme_v1", next);
+      } catch {
+        // ignore storage errors
+      }
+      document.documentElement.dataset.theme = next;
+      return next;
+    });
+  }, []);
+
+  const streakDays = useMemo(() => {
+    const activeNotesList = notes.filter((n) => !n.isTrashed);
+    if (activeNotesList.length === 0) return 0;
+    const toLocalDayKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate(),
+      ).padStart(2, "0")}`;
+    const activeDays = new Set<string>();
+    for (const n of activeNotesList) {
+      if (n.updatedAt) {
+        activeDays.add(toLocalDayKey(new Date(n.updatedAt)));
+      }
+      const dateMatch = /(\d{4}-\d{2}-\d{2})/.exec(n.relPath);
+      if (
+        dateMatch &&
+        (n.objectType === "journal" || n.relPath.toLowerCase().includes("journal"))
+      ) {
+        activeDays.add(dateMatch[1]);
+      }
+    }
+    const cursor = new Date();
+    if (!activeDays.has(toLocalDayKey(cursor))) {
+      cursor.setDate(cursor.getDate() - 1);
+      if (!activeDays.has(toLocalDayKey(cursor))) {
+        return 1;
+      }
+    }
+    let streak = 0;
+    while (activeDays.has(toLocalDayKey(cursor))) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return Math.max(1, streak);
+  }, [notes]);
+
   // Global Ctrl+K command palette shortcut
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCmdOpen((v) => !v);
+      } else if (
+        e.key === "Escape" &&
+        zenMode &&
+        !cmdOpen &&
+        !newNoteModalOpen &&
+        !newWorkspaceModalOpen &&
+        !importModalOpen &&
+        !settingsModalOpen
+      ) {
+        setZenMode(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [
+    zenMode,
+    cmdOpen,
+    newNoteModalOpen,
+    newWorkspaceModalOpen,
+    importModalOpen,
+    settingsModalOpen,
+  ]);
 
   // Initial auth check
   useEffect(() => {
@@ -887,8 +973,20 @@ export default function CortexMdPage() {
           <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-950 p-0.5 text-[11px]">
             <button
               type="button"
+              onClick={() => setMainView("home")}
+              className={`framer-press inline-flex items-center gap-1 px-2.5 py-1 rounded-md cursor-pointer ${
+                mainView === "home"
+                  ? "bg-zinc-800 text-zinc-100 font-medium"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Home</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setMainView("notes")}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md cursor-pointer ${
+              className={`framer-press inline-flex items-center gap-1 px-2.5 py-1 rounded-md cursor-pointer ${
                 mainView === "notes"
                   ? "bg-zinc-800 text-zinc-100 font-medium"
                   : "text-zinc-400 hover:text-zinc-200"
@@ -962,6 +1060,53 @@ export default function CortexMdPage() {
 
         {/* Right Controls */}
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setMainView("home")}
+            title={`Daily knowledge streak: ${streakDays} day${streakDays === 1 ? "" : "s"}`}
+            className="framer-press hidden sm:inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/15 transition cursor-pointer"
+          >
+            <Flame className="w-3.5 h-3.5" />
+            <span>{streakDays}d</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={
+              theme === "obsidian"
+                ? "Switch to Paper / Aesop light theme"
+                : "Switch to Obsidian dark theme"
+            }
+            aria-label="Toggle color theme"
+            className="framer-press inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 transition cursor-pointer"
+          >
+            {theme === "obsidian" ? (
+              <Sun className="w-3.5 h-3.5 text-amber-300" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 text-emerald-600" />
+            )}
+            <span className="hidden xl:inline capitalize">{theme}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setZenMode((v) => !v)}
+            title={zenMode ? "Exit Zen Focus Mode" : "Enter Zen Focus Mode"}
+            aria-pressed={zenMode}
+            className={`framer-press inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] transition cursor-pointer ${
+              zenMode
+                ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300 font-medium"
+                : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            {zenMode ? (
+              <Minimize2 className="w-3.5 h-3.5" />
+            ) : (
+              <Maximize2 className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden xl:inline">{zenMode ? "Exit Zen" : "Zen"}</span>
+          </button>
           {!isOnline || offlineQueue.length > 0 ? (
             <button
               type="button"
@@ -1029,7 +1174,7 @@ export default function CortexMdPage() {
       {/* Main Three-Pane Workspace */}
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
         {/* Left Navigation Rail */}
-        {leftOpen && (
+        {leftOpen && !zenMode && (
           <nav className="w-64 lg:w-72 shrink-0 border-r border-zinc-800/90 bg-[#0d0d11] flex flex-col min-h-0 z-20 max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl">
             <div className="p-2.5 border-b border-zinc-800/80 grid grid-cols-2 gap-1.5 text-xs">
               <button
@@ -1295,6 +1440,29 @@ export default function CortexMdPage() {
 
         {/* Center Canvas */}
         <main className="flex-1 flex flex-col min-w-0 min-h-0">
+          {mainView === "home" && (
+            <VaultHomeDashboard
+              workspaceName={activeWorkspace?.name || activeWorkspaceSlug}
+              workspaceSlug={activeWorkspaceSlug}
+              notes={notes}
+              tasks={tasks}
+              graph={graph}
+              conversationsCount={conversations.length}
+              streakDays={streakDays}
+              csrfToken={csrfToken}
+              onOpenNote={(id) => openNote(id)}
+              onCreateNote={() => setNewNoteModalOpen(true)}
+              onOpenDaily={() => handleOpenDaily()}
+              onOpenView={(v) => setMainView(v)}
+              onOpenAi={() => {
+                setZenMode(false);
+                setRightOpen(true);
+              }}
+              onCaptured={() => loadWorkspaceData(activeWorkspaceSlug)}
+              onNotify={notify}
+            />
+          )}
+
           {mainView === "notes" && (
             <MarkdownWorkspace
               workspaceSlug={activeWorkspaceSlug}
@@ -1607,7 +1775,7 @@ export default function CortexMdPage() {
         </main>
 
         {/* Right AI Studio Sidebar */}
-        {rightOpen && (
+        {rightOpen && !zenMode && (
           <div className="w-80 xl:w-96 shrink-0 flex flex-col min-h-0 z-20 max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:shadow-2xl">
             <AiSidebar
               workspaceSlug={activeWorkspaceSlug}
@@ -1917,11 +2085,24 @@ export default function CortexMdPage() {
         )}
       </div>
 
+      {zenMode && (
+        <button
+          type="button"
+          onClick={() => setZenMode(false)}
+          className="apple-glass framer-press fixed bottom-5 right-5 z-40 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 px-3.5 py-2 text-xs font-medium text-emerald-300 shadow-2xl hover:border-emerald-400 transition cursor-pointer"
+        >
+          <Minimize2 className="w-3.5 h-3.5" />
+          <span>Exit Zen Mode</span>
+        </button>
+      )}
+
       {/* Modals */}
       <CommandPalette
         open={cmdOpen}
         workspaceSlug={activeWorkspaceSlug}
         initialQuery={cmdInitialQuery}
+        availableTags={tags.map((t) => t.tag)}
+        availableFolders={folders}
         onClose={() => setCmdOpen(false)}
         onOpenNote={(id, slug, line) => openNote(id, { workspaceSlug: slug, line })}
         onSaveSearch={async (name, query) => {

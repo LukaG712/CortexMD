@@ -1,6 +1,11 @@
 import { getDb } from "@/lib/db";
-import { isPathPermittedForAi } from "./acl";
-import { computeLocalEmbedding, cosineSimilarity } from "./embeddings";
+import { createWorkspaceAclChecker } from "./acl";
+import {
+  computeLocalEmbedding,
+  cosineSimilarity,
+  getParsedEmbedding,
+  STOPWORDS,
+} from "./embeddings";
 
 export interface RagCitation {
   noteId: string;
@@ -46,31 +51,103 @@ export function sanitizeUntrustedNoteText(raw: string): string {
   return clean.replace(/<\/?untrusted_note_data[^>]*>/gi, "");
 }
 
-/** Build the untrusted-data context block passed to external LLMs/CLIs. */
-export function buildUntrustedContextBlock(citations: RagCitation[]): string {
+function stripFrontmatterAndNormalize(raw: string): string {
+  return raw
+    .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Build the untrusted-data context block passed to external LLMs/CLIs with dedupe and char budgeting. */
+export function buildUntrustedContextBlock(
+  citations: RagCitation[],
+  maxTotalChars = 4200,
+): string {
   if (citations.length === 0) {
     return "<knowledge_base_context>No permitted matching notes found.</knowledge_base_context>";
   }
-  const sections = citations.map((c, idx) => {
-    const safe = sanitizeUntrustedNoteText(c.snippet);
-    return [
-      `<untrusted_note_data index="${idx + 1}" workspace="${c.workspaceSlug}" path="${c.relPath}" heading="${c.heading}" lines="L${c.startLine}-L${c.endLine}">`,
-      safe,
-      `</untrusted_note_data>`,
-    ].join("\n");
-  });
-  return sections.join("\n\n");
+
+  interface MergedSection {
+    noteId: string;
+    workspaceSlug: string;
+    relPath: string;
+    headings: string[];
+    startLine: number;
+    endLine: number;
+    text: string;
+  }
+
+  const merged: MergedSection[] = [];
+  for (const c of citations) {
+    const cleanSnippet = stripFrontmatterAndNormalize(sanitizeUntrustedNoteText(c.snippet));
+    if (!cleanSnippet) continue;
+    const headingLabel = c.heading || c.title;
+
+    const existing = merged.find(
+      (m) =>
+        m.noteId === c.noteId &&
+        c.startLine <= m.endLine + 2 &&
+        c.endLine >= m.startLine - 2,
+    );
+
+    if (existing) {
+      existing.startLine = Math.min(existing.startLine, c.startLine);
+      existing.endLine = Math.max(existing.endLine, c.endLine);
+      if (headingLabel && !existing.headings.includes(headingLabel)) {
+        existing.headings.push(headingLabel);
+      }
+      if (!existing.text.includes(cleanSnippet)) {
+        existing.text = `${existing.text}\n${cleanSnippet}`;
+      }
+    } else {
+      merged.push({
+        noteId: c.noteId,
+        workspaceSlug: c.workspaceSlug,
+        relPath: c.relPath,
+        headings: headingLabel ? [headingLabel] : [c.title],
+        startLine: c.startLine,
+        endLine: c.endLine,
+        text: cleanSnippet,
+      });
+    }
+  }
+
+  if (merged.length === 0) {
+    return "<knowledge_base_context>No permitted matching notes found.</knowledge_base_context>";
+  }
+
+  const blocks: string[] = [];
+  let totalChars = 0;
+  for (let i = 0; i < merged.length; i++) {
+    const m = merged[i];
+    const header = `<untrusted_note_data index="${i + 1}" workspace="${m.workspaceSlug}" path="${m.relPath}" heading="${m.headings.join(" / ")}" lines="L${m.startLine}-L${m.endLine}">`;
+    const footer = `</untrusted_note_data>`;
+    const wrapperCost = header.length + footer.length + 4;
+    const remaining = maxTotalChars - totalChars - wrapperCost;
+    if (remaining <= 60 && blocks.length > 0) break;
+
+    const body =
+      remaining > 0 && m.text.length > remaining
+        ? `${m.text.slice(0, Math.max(40, remaining - 3)).trimEnd()}...`
+        : m.text;
+    const block = `${header}\n${body}\n${footer}`;
+    blocks.push(block);
+    totalChars += block.length + 2;
+  }
+
+  return blocks.join("\n\n");
 }
 
 function buildSafeFtsQuery(query: string): string {
-  const tokens = query
+  const rawTokens = query
     .toLowerCase()
     .replace(/[^a-z0-9\s_-]/g, " ")
     .split(/\s+/)
-    .filter((t) => t.length >= 2)
-    .slice(0, 10);
+    .filter((t) => t.length >= 2);
+  const meaningful = rawTokens.filter((t) => !STOPWORDS.has(t));
+  const tokens = (meaningful.length > 0 ? meaningful : rawTokens).slice(0, 10);
   if (tokens.length === 0) return "";
-  return tokens.map((t) => `"${t}"`).join(" OR ");
+  return tokens.map((t) => `"${t}"*`).join(" OR ");
 }
 
 /**
@@ -126,18 +203,19 @@ export function retrieveGroundedChunks(
     embedding_json: string;
   }>;
 
-  // Enforce AI Folder ACL BEFORE scoring/returning any document content
+  // Enforce AI Folder ACL BEFORE scoring/returning any document content (1 query per workspace)
+  const checkAcl = createWorkspaceAclChecker();
   const permitted = candidateRows.filter((row) =>
-    isPathPermittedForAi(row.workspace_id, row.rel_path),
+    checkAcl(row.workspace_id, row.rel_path),
   );
   if (permitted.length === 0) return [];
 
-  // 2. Keyword FTS5 scores per note_id
+  // 2. Keyword FTS5 scores per note_id (weighted: title=5, tags=3, rel_path=2, body=1)
   const ftsBoostByNote = new Map<string, number>();
   const ftsQuery = buildSafeFtsQuery(query);
   if (ftsQuery) {
     try {
-      let ftsSql = `SELECT note_id, bm25(notes_fts) as rank FROM notes_fts WHERE notes_fts MATCH ?`;
+      let ftsSql = `SELECT note_id, bm25(notes_fts, 0.0, 0.0, 2.0, 5.0, 3.0, 1.0) as rank FROM notes_fts WHERE notes_fts MATCH ?`;
       const ftsParams: Array<string> = [ftsQuery];
       if (scope.mode !== "all") {
         ftsSql += " AND workspace_id = ?";
@@ -156,20 +234,26 @@ export function retrieveGroundedChunks(
     }
   }
 
-  // 3. Hybrid Reciprocal Rank Fusion + Exact Term Overlap
-  const queryTerms = query
+  // 3. Hybrid Reciprocal Rank Fusion + Word-Boundary Exact Term Overlap
+  const rawQueryTerms = query
     .toLowerCase()
+    .replace(/[^a-z0-9\s_-]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 3);
+    .filter((w) => w.length >= 2);
+  const meaningfulTerms = rawQueryTerms.filter((w) => !STOPWORDS.has(w));
+  const queryTerms = meaningfulTerms.length > 0 ? meaningfulTerms : rawQueryTerms;
 
   const scored = permitted.map((row) => {
-    const vec = JSON.parse(row.embedding_json) as number[];
+    const vec = getParsedEmbedding(row.chunk_id, row.embedding_json);
     const semScore = cosineSimilarity(queryVec, vec);
     const ftsBonus = ftsBoostByNote.get(row.note_id) || 0;
     const lowerText = `${row.title} ${row.heading} ${row.content}`.toLowerCase();
+    const rowTokens = new Set(lowerText.split(/[^a-z0-9_-]+/).filter(Boolean));
     let termHits = 0;
     for (const t of queryTerms) {
-      if (lowerText.includes(t)) termHits++;
+      if (rowTokens.has(t) || (t.length >= 5 && lowerText.includes(t))) {
+        termHits++;
+      }
     }
     const lexicalRatio = queryTerms.length > 0 ? termHits / queryTerms.length : 0;
     const totalScore = semScore * 0.55 + ftsBonus * 0.65 + lexicalRatio * 0.45;
@@ -189,7 +273,28 @@ export function retrieveGroundedChunks(
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, limit);
+  if (scope.mode === "note") {
+    return scored.slice(0, limit);
+  }
+
+  // Cap per-note diversity in multi-note retrieval so one long file cannot crowd out other sources
+  const selected: RagCitation[] = [];
+  const overflow: RagCitation[] = [];
+  const countByNote = new Map<string, number>();
+
+  for (const item of scored) {
+    const cnt = countByNote.get(item.noteId) ?? 0;
+    if (cnt < 2 && selected.length < limit) {
+      selected.push(item);
+      countByNote.set(item.noteId, cnt + 1);
+    } else {
+      overflow.push(item);
+    }
+  }
+  while (selected.length < limit && overflow.length > 0) {
+    selected.push(overflow.shift()!);
+  }
+  return selected;
 }
 
 /**
@@ -200,8 +305,8 @@ export function analyzeContradictionsAndDuplicates(
   allWorkspaces = false,
 ): ContradictionFinding[] {
   const db = getDb();
-  let sql = `
-    SELECT c.note_id, c.workspace_id, w.slug as workspace_slug, n.rel_path, n.title,
+  const sql = `
+    SELECT c.id as chunk_id, c.note_id, c.workspace_id, w.slug as workspace_slug, n.rel_path, n.title,
            c.heading, c.start_line, c.end_line, c.content, c.embedding_json
     FROM note_chunks c
     JOIN notes n ON n.id = c.note_id
@@ -213,6 +318,7 @@ export function analyzeContradictionsAndDuplicates(
       ? db.prepare(sql).all()
       : db.prepare(`${sql} AND c.workspace_id = ?`).all(workspaceId)
   ) as Array<{
+    chunk_id: string;
     note_id: string;
     workspace_id: string;
     workspace_slug: string;
@@ -225,7 +331,8 @@ export function analyzeContradictionsAndDuplicates(
     embedding_json: string;
   }>;
 
-  const permitted = rows.filter((r) => isPathPermittedForAi(r.workspace_id, r.rel_path));
+  const checkAcl = createWorkspaceAclChecker();
+  const permitted = rows.filter((r) => checkAcl(r.workspace_id, r.rel_path));
   const findings: ContradictionFinding[] = [];
   const seenPairs = new Set<string>();
 
@@ -257,7 +364,7 @@ export function analyzeContradictionsAndDuplicates(
 
   const parsedChunks = permitted.map((r) => ({
     row: r,
-    vec: JSON.parse(r.embedding_json) as number[],
+    vec: getParsedEmbedding(r.chunk_id, r.embedding_json),
     metrics: extractMetrics(r.content),
   }));
 

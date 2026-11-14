@@ -223,6 +223,9 @@ CREATE TABLE IF NOT EXISTS flashcards (
 );
 
 CREATE INDEX IF NOT EXISTS idx_flashcards_ws_due ON flashcards(workspace_id, due_at);
+CREATE INDEX IF NOT EXISTS idx_notes_ws_trashed_updated ON notes(workspace_id, is_trashed, is_pinned DESC, is_favorite DESC, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_note_headings_note ON note_headings(note_id, start_line);
+CREATE INDEX IF NOT EXISTS idx_ai_messages_conv_created ON ai_messages(conversation_id, created_at);
 
 CREATE TABLE IF NOT EXISTS saved_searches (
   id TEXT PRIMARY KEY,

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { computeLocalEmbedding, cosineSimilarity } from "@/lib/ai/embeddings";
+import {
+  computeLocalEmbedding,
+  cosineSimilarity,
+  getParsedEmbedding,
+  STOPWORDS,
+} from "@/lib/ai/embeddings";
 import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { ensureAllWorkspacesIndexed } from "@/lib/indexer";
@@ -7,12 +12,13 @@ import { ensureAllWorkspacesIndexed } from "@/lib/indexer";
 export const dynamic = "force-dynamic";
 
 function buildSafeFtsQuery(query: string): string {
-  const tokens = query
+  const rawTokens = query
     .toLowerCase()
     .replace(/[^a-z0-9_\-\s]/g, " ")
     .split(/\s+/)
-    .filter((t) => t.length >= 2)
-    .slice(0, 8);
+    .filter((t) => t.length >= 2);
+  const meaningful = rawTokens.filter((t) => !STOPWORDS.has(t));
+  const tokens = (meaningful.length > 0 ? meaningful : rawTokens).slice(0, 8);
   if (tokens.length === 0) return "";
   return tokens.map((t) => `"${t}"*`).join(" OR ");
 }
@@ -148,7 +154,7 @@ export async function GET(req: NextRequest) {
       try {
         let ftsSql = `
           SELECT n.id, w.slug as workspace_slug, n.rel_path, n.title, n.folder, n.object_type,
-                 n.tags_json, n.updated_at, bm25(notes_fts) as rank,
+                 n.tags_json, n.updated_at, bm25(notes_fts, 0.0, 0.0, 2.0, 5.0, 3.0, 1.0) as rank,
                  snippet(notes_fts, 5, '<mark>', '</mark>', '...', 22) as snippet
           FROM notes_fts
           JOIN notes n ON n.id = notes_fts.note_id
@@ -232,7 +238,7 @@ export async function GET(req: NextRequest) {
     const qLower = q.toLowerCase();
     for (const row of chunkRows) {
       if (!matchesMetaFilters(row)) continue;
-      const vec = JSON.parse(row.embedding_json) as number[];
+      const vec = getParsedEmbedding(`${row.note_id}:${row.start_line}`, row.embedding_json);
       let sem = cosineSimilarity(qVec, vec);
       if (
         row.title.toLowerCase().includes(qLower) ||
