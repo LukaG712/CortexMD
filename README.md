@@ -35,8 +35,8 @@ CortexMD runs on your own homelab or Proxmox server as a single lightweight Next
 
 1. **Clone and configure environment variables:**
    ```bash
-   git clone https://github.com/LukaG712/md.git
-   cd md
+   git clone https://github.com/LukaG712/CortexMD.git
+   cd CortexMD
    cp .env.example .env
    ```
    Open `.env` and replace `ADMIN_PASSWORD` and `APP_SECRET` (32+ random characters recommended) before exposing over your LAN or VPN.
@@ -59,8 +59,8 @@ CortexMD runs on your own homelab or Proxmox server as a single lightweight Next
 Requires **Node.js 22.5+ / 24+** (uses built-in `node:sqlite`) and `npm`.
 
 ```bash
-git clone https://github.com/LukaG712/md.git
-cd md
+git clone https://github.com/LukaG712/CortexMD.git
+cd CortexMD
 cp .env.example .env
 npm install
 npm run dev
@@ -86,6 +86,9 @@ CortexMD runs completely standalone and 100% offline as a cross-platform desktop
 - **Automatic single-user login:** Opens directly into your personal workspace without password prompts.
 - **Native OS Vault location:** Stores your Markdown notes directly in `Documents/CortexMD/vaults/` so you can view, edit, or back them up anytime with any tool.
 - **OS File Explorer Integration:** Native desktop menu option (`Bestand -> Open Kluis in Verkenner` or `Ctrl+O`) opens your vault directory directly in Windows Explorer, macOS Finder, or Linux file manager.
+
+**0. Download pre-built installers:**
+Pre-built desktop packages for Windows (`.exe`, `.zip`), macOS (`.dmg`, `.zip` for Apple Silicon & Intel), and Linux (`.AppImage`, `.deb`, `.tar.gz`) are published automatically via GitHub Actions on [GitHub Releases](https://github.com/LukaG712/CortexMD/releases).
 
 **1. Run the desktop app locally:**
 ```bash
