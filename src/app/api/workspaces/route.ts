@@ -12,7 +12,12 @@ import {
   extractWorkspaceTasks,
   reconcileWorkspace,
 } from "@/lib/indexer";
-import { NOTE_TEMPLATES, sanitizeSlug, writeMarkdownFile } from "@/lib/storage";
+import {
+  ensureDefaultVaultFolders,
+  NOTE_TEMPLATES,
+  sanitizeSlug,
+  writeMarkdownFile,
+} from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +130,7 @@ export async function POST(req: NextRequest) {
   }
 
   const rootPath = path.join(getVaultsDir(), slug);
-  fs.mkdirSync(rootPath, { recursive: true });
+  ensureDefaultVaultFolders(rootPath);
 
   const id = crypto.randomUUID();
   const now = Date.now();

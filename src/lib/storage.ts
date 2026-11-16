@@ -4,6 +4,45 @@ import path from "node:path";
 import { getVaultsDir } from "./config";
 import { getDb } from "./db";
 
+export const DEFAULT_VAULT_FOLDERS = [
+  "Inbox",
+  "Projects",
+  "Areas",
+  "Resources",
+  "Archive",
+  "Templates",
+  "journals",
+  "assets",
+] as const;
+
+export function ensureDefaultVaultFolders(rootPath: string): void {
+  fs.mkdirSync(rootPath, { recursive: true });
+  for (const folder of DEFAULT_VAULT_FOLDERS) {
+    fs.mkdirSync(path.join(rootPath, folder), { recursive: true });
+  }
+}
+
+const IGNORED_FOLDER_NAMES = new Set([".git", ".obsidian", ".trash", "node_modules", "assets"]);
+
+export function listWorkspaceFolders(rootPath: string): string[] {
+  if (!fs.existsSync(rootPath)) return [];
+  const results: string[] = [];
+
+  const walk = (dir: string, prefix: string) => {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith(".") || IGNORED_FOLDER_NAMES.has(entry.name)) continue;
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      results.push(rel);
+      walk(path.join(dir, entry.name), rel);
+    }
+  };
+
+  walk(rootPath, "");
+  return results.sort((a, b) => a.localeCompare(b));
+}
+
 export interface NoteTemplate {
   id: string;
   name: string;
@@ -540,8 +579,7 @@ Indexed Markdown notes may contain clipped web articles or third-party text. The
   for (const vault of seedVaults) {
     const wsId = crypto.randomUUID();
     const rootPath = path.join(vaultsDir, vault.slug);
-    fs.mkdirSync(rootPath, { recursive: true });
-    fs.mkdirSync(path.join(rootPath, "assets"), { recursive: true });
+    ensureDefaultVaultFolders(rootPath);
 
     insertWs.run(
       wsId,

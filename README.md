@@ -228,8 +228,8 @@ npm start      # Serve production build
 
 ## Further Documentation
 
-- [Architecture Overview](ARCHITECTURE.md)
-- [Proxmox & Docker Deployment Guide](PROXMOX_DEPLOYMENT.md)
-- [Research & Ecosystem Comparison](RESEARCH.md)
-- [Implementation Plan](IMPLEMENTATION_PLAN.md)
-- [Implementation Status](IMPLEMENTATION_STATUS.md)
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Proxmox & Docker Deployment Guide](docs/PROXMOX_DEPLOYMENT.md)
+- [Research & Ecosystem Comparison](docs/RESEARCH.md)
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
+- [Implementation Status](docs/IMPLEMENTATION_STATUS.md)

@@ -26,6 +26,7 @@ import {
   parseTransclusionTargets,
 } from "@/lib/render-rich";
 import {
+  listWorkspaceFolders,
   NOTE_TEMPLATES,
   normalizeRelPath,
   resolveVaultPath,
@@ -284,7 +285,7 @@ export async function GET(req: NextRequest) {
   const pathTo = req.nextUrl.searchParams.get("pathTo") || undefined;
 
   const tagCounts = new Map<string, number>();
-  const folders = new Set<string>();
+  const folders = new Set<string>(listWorkspaceFolders(ws.root_path));
   for (const n of notes) {
     if (!n.isTrashed) {
       if (n.folder) folders.add(n.folder);

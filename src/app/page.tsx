@@ -124,6 +124,9 @@ export default function CortexMdPage() {
   >("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderPath, setNewFolderPath] = useState("");
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   // Workspace & Note data
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
@@ -881,12 +884,53 @@ export default function CortexMdPage() {
       arr.push(n);
       map.set(key, arr);
     }
+    if (sidebarFilter === "all" && !selectedTag) {
+      for (const f of folders) {
+        if (!map.has(f)) {
+          map.set(f, []);
+        }
+      }
+    }
     return Array.from(map.entries()).sort(([a], [b]) => {
       if (a === "(Root)") return -1;
       if (b === "(Root)") return 1;
       return a.localeCompare(b);
     });
-  }, [filteredNotes]);
+  }, [filteredNotes, folders, sidebarFilter, selectedTag]);
+
+  const handleCreateFolder = useCallback(
+    async (e?: React.FormEvent) => {
+      e?.preventDefault();
+      const trimmed = newFolderPath.trim().replace(/^\/+|\/+$/g, "");
+      if (!trimmed || creatingFolder) return;
+      setCreatingFolder(true);
+      try {
+        const res = await fetch("/api/folders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfToken,
+          },
+          body: JSON.stringify({
+            workspaceSlug: activeWorkspaceSlug,
+            folderPath: trimmed,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          notify(data.error || "Failed to create folder");
+          return;
+        }
+        setNewFolderPath("");
+        setNewFolderOpen(false);
+        await loadWorkspaceData(activeWorkspaceSlug);
+        notify(`Created folder "${data.folder}"`);
+      } finally {
+        setCreatingFolder(false);
+      }
+    },
+    [newFolderPath, creatingFolder, csrfToken, activeWorkspaceSlug, loadWorkspaceData, notify],
+  );
 
   if (!authChecked) {
     return (
@@ -1176,22 +1220,66 @@ export default function CortexMdPage() {
         {/* Left Navigation Rail */}
         {leftOpen && !zenMode && (
           <nav className="w-64 lg:w-72 shrink-0 border-r border-zinc-800/90 bg-[#0d0d11] flex flex-col min-h-0 z-20 max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl">
-            <div className="p-2.5 border-b border-zinc-800/80 grid grid-cols-2 gap-1.5 text-xs">
+            <div className="p-2.5 border-b border-zinc-800/80 grid grid-cols-3 gap-1.5 text-xs">
               <button
                 type="button"
                 onClick={() => setNewNoteModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-semibold py-1.5 cursor-pointer"
+                className="flex items-center justify-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-semibold py-1.5 cursor-pointer"
+                title="Create a new note"
               >
-                <FilePlus2 className="w-3.5 h-3.5" /> New Note
+                <FilePlus2 className="w-3.5 h-3.5" /> Note
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewFolderOpen((v) => !v);
+                  setNewFolderPath("");
+                }}
+                className="flex items-center justify-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 py-1.5 cursor-pointer"
+                title="Create a new folder"
+              >
+                <FolderPlus className="w-3.5 h-3.5 text-sky-400" /> Folder
               </button>
               <button
                 type="button"
                 onClick={() => handleOpenDaily()}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 py-1.5 cursor-pointer"
+                className="flex items-center justify-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 py-1.5 cursor-pointer"
+                title="Open today's daily journal"
               >
                 <CalendarDays className="w-3.5 h-3.5 text-amber-400" /> Daily
               </button>
             </div>
+
+            {newFolderOpen && (
+              <form
+                onSubmit={handleCreateFolder}
+                className="px-2.5 py-2 border-b border-zinc-800/80 bg-zinc-900/60 flex items-center gap-1.5 text-xs"
+              >
+                <input
+                  type="text"
+                  value={newFolderPath}
+                  onChange={(e) => setNewFolderPath(e.target.value)}
+                  placeholder="Folder or Parent/Subfolder"
+                  autoFocus
+                  className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-[11px] text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-500"
+                />
+                <button
+                  type="submit"
+                  disabled={creatingFolder || !newFolderPath.trim()}
+                  className="px-2 py-1 rounded-md bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-zinc-950 font-semibold text-[11px] cursor-pointer"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewFolderOpen(false)}
+                  className="p-1 text-zinc-500 hover:text-zinc-200 cursor-pointer"
+                  title="Cancel"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            )}
 
             {/* Filter Pills */}
             <div className="px-2.5 py-2 border-b border-zinc-800/60 flex flex-wrap gap-1 text-[11px]">
@@ -1246,33 +1334,58 @@ export default function CortexMdPage() {
               ) : (
                 notesByFolder.map(([folderName, folderNotes]) => {
                   const collapsed = collapsedFolders.has(folderName);
+                  const depth = folderName === "(Root)" ? 0 : folderName.split("/").length - 1;
+                  const displayName =
+                    folderName === "(Root)"
+                      ? "(Root)"
+                      : folderName.split("/").pop() || folderName;
                   return (
                     <div key={folderName} className="space-y-0.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCollapsedFolders((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(folderName)) next.delete(folderName);
-                            else next.add(folderName);
-                            return next;
-                          })
-                        }
-                        className="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 cursor-pointer"
+                      <div
+                        style={{ paddingLeft: `${6 + depth * 12}px` }}
+                        className="group w-full flex items-center justify-between pr-1.5 py-1 rounded text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
                       >
-                        <span className="inline-flex items-center gap-1.5 truncate">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCollapsedFolders((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(folderName)) next.delete(folderName);
+                              else next.add(folderName);
+                              return next;
+                            })
+                          }
+                          className="flex-1 min-w-0 flex items-center gap-1.5 truncate text-left cursor-pointer"
+                          title={folderName}
+                        >
                           {collapsed ? (
-                            <ChevronRight className="w-3.5 h-3.5" />
+                            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                           ) : (
-                            <ChevronDown className="w-3.5 h-3.5" />
+                            <ChevronDown className="w-3.5 h-3.5 shrink-0" />
                           )}
-                          <Folder className="w-3.5 h-3.5 text-zinc-500" />
-                          <span className="truncate">{folderName}</span>
-                        </span>
-                        <span className="text-[10px] text-zinc-600">
-                          {folderNotes.length}
-                        </span>
-                      </button>
+                          <Folder className="w-3.5 h-3.5 shrink-0 text-zinc-500" />
+                          <span className="truncate">{displayName}</span>
+                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {folderName !== "(Root)" && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNewFolderOpen(true);
+                                setNewFolderPath(`${folderName}/`);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-sky-400 p-0.5 cursor-pointer"
+                              title={`Create subfolder in ${folderName}`}
+                            >
+                              <FolderPlus className="w-3 h-3" />
+                            </button>
+                          )}
+                          <span className="text-[10px] text-zinc-600">
+                            {folderNotes.length}
+                          </span>
+                        </div>
+                      </div>
 
                       {!collapsed &&
                         folderNotes.map((n) => {
