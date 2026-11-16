@@ -1,21 +1,19 @@
 <div align="center">
 
-<a href="https://github.com/LukaG712/CortexMD">
-  <img src="docs/banner.svg" alt="CortexMD — Self-hosted, Markdown-first, AI-native personal knowledge platform" width="100%" />
-</a>
-
-<br /><br />
-
-[![Build & Release](https://img.shields.io/github/actions/workflow/status/LukaG712/CortexMD/release.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI%20%2F%20Release)](https://github.com/LukaG712/CortexMD/actions/workflows/release.yml)
-[![Latest Release](https://img.shields.io/github/v/release/LukaG712/CortexMD?style=for-the-badge&logo=electron&logoColor=white&color=10b981&label=Desktop%20App)](https://github.com/LukaG712/CortexMD/releases)
-![Next.js 15](https://img.shields.io/badge/Next.js-15-09090b?style=for-the-badge&logo=next.js&logoColor=white)
-![Node.js 24](https://img.shields.io/badge/Node.js-24%2B-18181b?style=for-the-badge&logo=node.js&logoColor=339933)
-![SQLite FTS5](https://img.shields.io/badge/SQLite-WAL%20%2B%20FTS5-18181b?style=for-the-badge&logo=sqlite&logoColor=38bdf8)
-
-<h3>Own your knowledge. Run AI locally. Sync without conflicts.</h3>
+<h1>CortexMD</h1>
 
 <p>
-  CortexMD unifies <strong>Obsidian-grade plain Markdown vaults</strong>, <strong>Notion-style structured views</strong>, and a <strong>NotebookLM-grounded AI studio</strong> into a single lightweight Next.js + <code>node:sqlite</code> monolith — deployable on your homelab or as a 100% offline desktop app.
+  <strong>Self-hosted, Markdown-first, AI-native personal knowledge platform.</strong>
+</p>
+
+[![Build & Release](https://img.shields.io/github/actions/workflow/status/LukaG712/CortexMD/release.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=build)](https://github.com/LukaG712/CortexMD/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/LukaG712/CortexMD?style=flat-square&color=10b981&label=release)](https://github.com/LukaG712/CortexMD/releases)
+![Next.js 15](https://img.shields.io/badge/Next.js-15-09090b?style=flat-square&logo=next.js)
+![Node.js 24](https://img.shields.io/badge/Node.js-24%2B-339933?style=flat-square&logo=node.js&logoColor=white)
+![SQLite FTS5](https://img.shields.io/badge/SQLite-FTS5-003B57?style=flat-square&logo=sqlite&logoColor=white)
+
+<p>
+  CortexMD unifies <strong>plain Markdown vaults</strong>, <strong>structured Notion-style views</strong>, and a <strong>zero-key local AI studio</strong> in a single Next.js + <code>node:sqlite</code> monolith — deployable on your homelab or as an offline desktop app.
 </p>
 
 <p>
