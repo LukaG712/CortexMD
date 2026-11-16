@@ -1,40 +1,93 @@
 <div align="center">
 
-# CortexMD
+<a href="https://github.com/LukaG712/CortexMD">
+  <img src="docs/banner.svg" alt="CortexMD — Self-hosted, Markdown-first, AI-native personal knowledge platform" width="100%" />
+</a>
 
-**A self-hosted, Markdown-first, AI-native personal knowledge management platform.**
+<br /><br />
 
-Plain `.md` files on disk. Zero mandatory API keys. Embedded SQLite FTS5 + 384-dim semantic search.  
-Run it on your homelab with Docker or as a 100% offline standalone desktop app.
+[![Build & Release](https://img.shields.io/github/actions/workflow/status/LukaG712/CortexMD/release.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI%20%2F%20Release)](https://github.com/LukaG712/CortexMD/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/LukaG712/CortexMD?style=for-the-badge&logo=electron&logoColor=white&color=10b981&label=Desktop%20App)](https://github.com/LukaG712/CortexMD/releases)
+![Next.js 15](https://img.shields.io/badge/Next.js-15-09090b?style=for-the-badge&logo=next.js&logoColor=white)
+![Node.js 24](https://img.shields.io/badge/Node.js-24%2B-18181b?style=for-the-badge&logo=node.js&logoColor=339933)
+![SQLite FTS5](https://img.shields.io/badge/SQLite-WAL%20%2B%20FTS5-18181b?style=for-the-badge&logo=sqlite&logoColor=38bdf8)
 
-[![Build and Release Desktop App](https://github.com/LukaG712/CortexMD/actions/workflows/release.yml/badge.svg)](https://github.com/LukaG712/CortexMD/actions/workflows/release.yml)
-![Next.js 15](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
-![Node.js 24](https://img.shields.io/badge/Node.js-24%2B-339933?logo=node.js&logoColor=white)
-![SQLite WAL + FTS5](https://img.shields.io/badge/SQLite-node%3Asqlite%20%2B%20FTS5-003B57?logo=sqlite&logoColor=white)
-![Electron Desktop](https://img.shields.io/badge/Desktop-Windows%20%7C%20macOS%20%7C%20Linux-47848F?logo=electron&logoColor=white)
+<h3>Own your knowledge. Run AI locally. Sync without conflicts.</h3>
 
-[Quick Start](#-quick-start) •
-[Features](#-core-capabilities) •
-[Architecture](#-architecture) •
-[AI Studio](#-grounded-ai-studio) •
-[Desktop App](#option-1--standalone-desktop-app-windows--macos--linux) •
-[Documentation](#-documentation)
+<p>
+  CortexMD unifies <strong>Obsidian-grade plain Markdown vaults</strong>, <strong>Notion-style structured views</strong>, and a <strong>NotebookLM-grounded AI studio</strong> into a single lightweight Next.js + <code>node:sqlite</code> monolith — deployable on your homelab or as a 100% offline desktop app.
+</p>
+
+<p>
+  <a href="#-quick-start"><strong>Quick Start</strong></a> &nbsp;·&nbsp;
+  <a href="#-platform-pillars"><strong>Features</strong></a> &nbsp;·&nbsp;
+  <a href="#-architecture"><strong>Architecture</strong></a> &nbsp;·&nbsp;
+  <a href="#-grounded-ai-studio"><strong>AI Studio</strong></a> &nbsp;·&nbsp;
+  <a href="#-security--privacy"><strong>Security</strong></a> &nbsp;·&nbsp;
+  <a href="#-documentation"><strong>Docs</strong></a>
+</p>
 
 </div>
 
 ---
 
+> [!TIP]
+> **Zero API Keys Required:** CortexMD ships with a built-in **`local-hybrid`** RAG engine (SQLite FTS5 BM25 + 384-dimension semantic embeddings). Your notes stay on your disk and never leave your machine unless you explicitly enable an external LLM provider.
+
+---
+
+## Platform Pillars
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🗂️ Plain-Text Source of Truth</h3>
+      <ul>
+        <li><strong>PARA-Ready Vaults:</strong> Auto-initializes <code>Inbox/</code>, <code>Projects/</code>, <code>Areas/</code>, <code>Resources/</code>, <code>Archive/</code>, <code>Templates/</code>, <code>journals/</code>, and <code>assets/</code>.</li>
+        <li><strong>Nested Explorer:</strong> Create folders and deeply nested subfolders directly from the sidebar.</li>
+        <li><strong>Graph &amp; Transclusion:</strong> <code>[[WikiLinks]]</code>, backlink refactoring on rename, unlinked mention discovery, <code>![[Note#Heading]]</code> transclusions, and <strong>JSON Canvas 1.0</strong> boards.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🧠 Grounded AI Studio</h3>
+      <ul>
+        <li><strong>Verifiable Citations:</strong> Streaming SSE answers with exact <code>#Lstart-Lend</code> line citations and hover previews.</li>
+        <li><strong>Synthesis &amp; Audio:</strong> One-click Study Guides, FAQs, Contradiction Scans, Two-Host Audio Briefings, and URL Web Clipper.</li>
+        <li><strong>Diff-Gated Agents:</strong> Inline <code>Ctrl+I</code> rewrites and Vault Gardener edits render unified diffs for human approval before touching disk.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>⚡ Structured Views &amp; Active Recall</h3>
+      <ul>
+        <li><strong>Live Queries:</strong> Embedded <code>cortex-query</code> code blocks render live filtered tables and lists across your vault.</li>
+        <li><strong>Kanban &amp; Calendar:</strong> Drag-and-drop task boards (<code>status</code> / <code>priority</code>) and activity heatmaps linked to daily notes.</li>
+        <li><strong>SM-2 Flashcards:</strong> Write <code>Q:</code>/<code>A:</code>, <code>::</code>, or <code>#card</code> inline and review with spaced repetition.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🔄 Conflict-Safe Sync &amp; Craft</h3>
+      <ul>
+        <li><strong>Optimistic Concurrency:</strong> <code>baseSha256</code> verification catches concurrent edits and opens a 3-way hunk-by-hunk conflict resolver.</li>
+        <li><strong>Offline PWA + Git:</strong> Real-time SSE sync, IndexedDB offline mirror, version snapshots, and per-vault Git commits.</li>
+        <li><strong>Editorial Craft:</strong> Switch between <strong>Obsidian Dark</strong> and <strong>Paper</strong>, toggle <strong>Editorial Serif</strong>, or enter <strong>Zen Focus</strong> mode.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Why CortexMD?
 
-Most knowledge tools force a trade-off between **local ownership**, **multi-device sync**, and **verifiable AI**. CortexMD combines all three in a single lightweight Next.js + `node:sqlite` monolith:
-
-| Capability | Traditional Local-First | Cloud SaaS PKM | **CortexMD** |
+| Capability | Local-First Sync Tools | Cloud SaaS PKM | **CortexMD** |
 | :--- | :--- | :--- | :--- |
-| **Source of Truth** | Plain `.md` (sync conflicts common) | Proprietary database / export | **Plain `.md` + `/assets/` on disk** |
-| **Multi-Device Sync** | Third-party sync daemons | Vendor cloud | **Real-time SSE + 3-way conflict resolver** |
-| **AI & RAG** | Paid plugins & external API keys | Cloud-only, opaque context | **Zero-key `local-hybrid` built-in + optional LLMs** |
-| **AI Safety** | Unrestricted prompt access | Vendor-managed | **Per-folder ACLs (`allow`/`deny`) + diff-gated edits** |
-| **Deployment** | Desktop only | Hosted only | **Docker / Proxmox LXC + Offline Desktop + PWA** |
+| **Data Ownership** | Plain `.md` on disk | Proprietary cloud DB | **Plain `.md` + `/assets/` on your disk** |
+| **Multi-Device Sync** | Fragile 3rd-party file sync | Vendor cloud | **Real-time SSE + 3-way conflict resolver** |
+| **AI & RAG** | Paid plugins & API keys | Cloud-only, opaque | **Zero-key `local-hybrid` built-in + BYO LLM** |
+| **AI Access Control** | Unrestricted file reads | Vendor-managed | **Per-folder ACLs (`allow`/`deny`) + diff approval** |
+| **Deployment** | Desktop only | Hosted only | **Offline Desktop + Docker / Proxmox + PWA** |
 
 ---
 
@@ -42,21 +95,21 @@ Most knowledge tools force a trade-off between **local ownership**, **multi-devi
 
 ```mermaid
 flowchart LR
-    subgraph Clients["Clients"]
+    subgraph Clients["Clients & Capture"]
         Web["Web & Mobile PWA\n(IndexedDB Offline Mirror)"]
         Desktop["Electron Desktop App\n(Windows · macOS · Linux)"]
-        Webhook["Quick Capture\nPOST /api/capture"]
+        Webhook["Quick Capture API\nPOST /api/capture"]
     end
 
     subgraph Core["CortexMD Monolith (Next.js 15 + Node 24)"]
-        API["REST + SSE API\n(RBAC · CSRF · Conflict Check)"]
+        API["REST + SSE Layer\n(RBAC · CSRF · SHA-256 Sync)"]
         Index["Indexer & Graph Engine\n(WikiLinks · Transclusions · Queries)"]
         AI["Grounded AI Studio\n(FTS5 BM25 + 384-dim Vectors + ACLs)"]
     end
 
-    subgraph Storage["Plain-File & Embedded Storage"]
-        Vaults["Markdown Vaults\n(Inbox, Projects, Areas, Resources, Archive, Templates, journals)"]
-        SQLite["SQLite WAL\n(FTS5, Chunks, Versions, Graph)"]
+    subgraph Storage["Local-First Storage"]
+        Vaults["Plain Markdown Vaults\n(Inbox · Projects · Areas · Resources · Archive)"]
+        SQLite["SQLite WAL Index\n(FTS5 · Embeddings · Versions · Graph)"]
     end
 
     Clients --> API
@@ -69,131 +122,70 @@ flowchart LR
 
 ---
 
-## Core Capabilities
+## Grounded AI Studio
 
-### Markdown-First Knowledge Base
-- **Standard Vault Structure:** Every workspace initializes clean PARA-ready folders (`Inbox/`, `Projects/`, `Areas/`, `Resources/`, `Archive/`, `Templates/`, `journals/`, `assets/`) with nested subfolder creation directly from the sidebar.
-- **Rich Linking & Transclusion:** `[[WikiLinks]]`, automatic backlinks, one-click unlinked mention conversion, automatic backlink refactoring on rename, and full/section/block transclusion (`![[Note]]`, `![[Note#Heading]]`, `![[Note#^block-id]]`).
-- **Interactive Knowledge Graph & Canvas:** 1-hop local graph view, shortest-path finder, semantic ghost links, community clusters, and **JSON Canvas 1.0** (`.canvas`) spatial boards.
+Choose **zero-key offline intelligence** by default, or connect your preferred local/cloud provider in `.env` or **Settings**:
 
-### Structured Views & Active Recall
-- **YAML Properties & Live Queries:** Interactive frontmatter properties grid and embedded `cortex-query` live tables/lists.
-- **Tasks, Calendar & Flashcards:** Drag-and-drop Kanban boards (`status` / `priority`), activity heatmap with daily journals, and **SM-2 spaced repetition** flashcards (`Q:`/`A:`, `::`, `#card`).
-
-### Craft, Sync & Homelab Ops
-- **Themes & Focus Modes:** Switch between **Obsidian Dark** and warm alabaster **Paper**, toggle **Pentagram `Aa` Editorial Serif** (`68ch` measure), or enter **Zen Focus** mode.
-- **Home Dashboard & Faceted `Ctrl+K`:** Vault KPIs, Quick Capture bar, Daily Streak tracker, 5-step onboarding quest, and faceted command palette (`mode`, `type`, `folder`, `tag`) with live note preview.
-- **Conflict-Safe Multi-Device Sync:** `baseSha256` optimistic concurrency with side-by-side 3-way hunk resolution, version snapshots, per-vault Git snapshots, and offline-capable **PWA**.
-- **Multi-User RBAC:** `scrypt` password hashing, `HttpOnly` sessions, CSRF protection, and per-workspace `admin` / `editor` / `viewer` roles.
-
-<details>
-<summary><strong>Markdown & Keyboard Cheatsheet</strong> (click to expand)</summary>
-
-#### Keyboard Shortcuts
-| Shortcut | Action |
-| :--- | :--- |
-| `Ctrl+K` / `Cmd+K` | Open faceted Command Palette (Hybrid FTS5 + semantic search) |
-| `Ctrl+I` / `Cmd+I` | Inline AI Rewrite with side-by-side diff preview |
-| `Ctrl+O` | *(Desktop)* Open Vault directory in OS File Explorer / Finder |
-
-#### Live Embedded Queries (`cortex-query`)
-````markdown
-```cortex-query
-tag: #homelab
-status: active
-sort: updated desc
-view: table
-limit: 10
-```
-````
-
-#### Flashcards (SM-2 Spaced Repetition)
-```markdown
-Q: What isolates Proxmox LXC backups?
-A: Separate HDD dataset and incremental snapshots.
-
-SM-2 :: SuperMemo-2 spaced repetition algorithm.
-
-### Default Hash Algorithm #card
-scryptSync with per-user 16-byte random salt.
-```
-
-#### Diagrams & Math
-- Diagrams via standard ` ```mermaid ` code fences
-- LaTeX math via inline `$E = mc^2$` or block `$$ ... $$`
-
-</details>
+| Provider | Execution | Requirements |
+| :--- | :--- | :--- |
+| **`local-hybrid`** *(Default)* | Embedded FTS5 + 384-dim vectors | **None** — 100% offline, zero API keys |
+| **`ollama`** | Self-hosted local models | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` |
+| **`gemini-cli`** | Local CLI (Google OAuth 2.0) | Local Gemini CLI login |
+| **`github-copilot`** | GitHub OAuth pass-through | `COPILOT_GITHUB_TOKEN` |
+| **`jetbrains-junie`** | Headless CLI / BYOK | `JUNIE_API_KEY` |
+| **`gemini-api`** | Google Gemini Cloud API | `GEMINI_API_KEY` |
 
 ---
 
-## Grounded AI Studio
+## Security & Privacy
 
-CortexMD works **out of the box** with zero external API keys using its built-in **`local-hybrid`** engine (SQLite FTS5 BM25 + sublinear-TF 384-dimension semantic embeddings).
+> [!IMPORTANT]
+> CortexMD is engineered with defense-in-depth for both self-hosted homelabs and agentic AI workflows.
 
-- **Verifiable Citations:** Streaming SSE chat with `#Lstart-Lend` line citations and hover citation previews.
-- **Synthesis Tools:** Contradiction scan, Study Guides, FAQs, Two-Host Audio Briefings (Web Speech API), and URL/HTML web clipper (`Sources/*.md`).
-- **Approval-Gated Agent Edits:** Inline `Ctrl+I` rewrites and Vault Gardener proposals render unified diffs before touching disk, enforced by per-folder AI ACLs (`allow` / `deny`).
-
-| Provider | Mode | Configuration |
-| :--- | :--- | :--- |
-| **`local-hybrid`** *(default)* | Built-in offline | Zero config — FTS5 + local 384-dim vectors |
-| `ollama` | Self-hosted LLM | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` |
-| `gemini-cli` | Local CLI (OAuth 2.0) | Google Gemini CLI |
-| `github-copilot` | OAuth pass-through | `COPILOT_GITHUB_TOKEN` |
-| `jetbrains-junie` | Headless CLI / BYOK | `JUNIE_API_KEY` |
-| `gemini-api` | Cloud API | `GEMINI_API_KEY` |
+- **Pre-Retrieval Folder ACLs:** Restricted directories (such as `Private/`) are filtered *before* chunks ever enter RAG retrieval or external LLM prompts.
+- **Prompt Injection Isolation:** Indexed note content is wrapped in `<untrusted_note_data>` boundaries before being forwarded to any external model.
+- **Human-in-the-Loop Mutations:** AI agents can only propose unified diffs — no file on disk is ever modified without explicit user approval.
+- **Hardened Auth & RBAC:** `scrypt` per-user salted password hashing, `HttpOnly` sessions, CSRF tokens, optional reverse-proxy SSO (`TRUSTED_PROXY_AUTH_HEADER`), and workspace `admin` / `editor` / `viewer` roles.
 
 ---
 
 ## Quick Start
 
-### Option 1 — Standalone Desktop App (Windows / macOS / Linux)
+### Option 1 — Standalone Desktop App (Windows · macOS · Linux)
 
-Run CortexMD 100% offline with zero Docker, zero external server, automatic single-user login, and native vaults stored in `Documents/CortexMD/vaults/`.
+Run CortexMD 100% offline with zero Docker, automatic single-user login, and native vaults stored in `Documents/CortexMD/vaults/`.
 
 - **Pre-built Installers:** Download `.exe` / `.zip` (Windows), `.dmg` / `.zip` (macOS Apple Silicon & Intel), or `.AppImage` / `.deb` / `.tar.gz` (Linux) from **[GitHub Releases](https://github.com/LukaG712/CortexMD/releases)**.
-- **Run or build locally from source:**
+- **Run or package from source:**
   ```bash
   git clone https://github.com/LukaG712/CortexMD.git
   cd CortexMD
   npm install
 
-  # Launch desktop app locally
-  npm run desktop
-
-  # Or build installers for your OS
-  npm run dist:win     # Windows (.exe, .zip)
-  npm run dist:mac     # macOS (.dmg, .zip x64 + arm64)
-  npm run dist:linux   # Linux (.AppImage, .deb, .tar.gz)
+  npm run desktop      # Launch desktop app locally
+  npm run dist:win     # Build Windows (.exe, .zip)
+  npm run dist:mac     # Build macOS (.dmg, .zip x64 + arm64)
+  npm run dist:linux   # Build Linux (.AppImage, .deb, .tar.gz)
   ```
 
 ---
 
 ### Option 2 — Docker Compose (Homelab / Proxmox LXC)
 
-1. **Clone and configure environment variables:**
-   ```bash
-   git clone https://github.com/LukaG712/CortexMD.git
-   cd CortexMD
-   cp .env.example .env
-   ```
-   Replace `ADMIN_PASSWORD` and `APP_SECRET` (32+ random characters) in `.env` before exposing over your LAN or VPN.
+```bash
+git clone https://github.com/LukaG712/CortexMD.git
+cd CortexMD
+cp .env.example .env
+# Edit .env to set strong ADMIN_PASSWORD and APP_SECRET (32+ chars)
+docker compose -f docker/docker-compose.yml up -d --build
+```
 
-2. **Start the container:**
-   ```bash
-   docker compose -f docker/docker-compose.yml up -d --build
-   ```
-
-3. **Open CortexMD:**  
-   Visit `http://localhost:3000` (default `.env.example` credentials: `admin` / `cortex-admin-change-me`).
-
-> Vaults and the SQLite index persist outside the container at `${CORTEX_HOST_DATA_PATH:-./data}` (mapped to `/data`), with backups at `${CORTEX_HOST_BACKUP_PATH:-./backups}`.
+Open **`http://localhost:3000`** (default `.env.example` credentials: `admin` / `cortex-admin-change-me`).  
+Persistent vaults and SQLite data live outside the container at `./data` and `./backups`.
 
 ---
 
 ### Option 3 — Local Development (Node.js 24+)
-
-Requires **Node.js 22.5+ / 24+** (uses built-in `node:sqlite`) and `npm`.
 
 ```bash
 git clone https://github.com/LukaG712/CortexMD.git
@@ -204,12 +196,12 @@ npm run dev
 ```
 
 <details>
-<summary><strong>Development, Verification & Mobile PWA</strong></summary>
+<summary><strong>Verification Scripts &amp; Mobile PWA Setup</strong></summary>
 
 ```bash
 npm run dev    # Start Next.js development server
 npm run lint   # Run TypeScript compiler check (tsc --noEmit)
-npm test       # Run Vitest end-to-end test suite (20 tests in tests/platform.test.ts)
+npm test       # Run Vitest end-to-end platform suite (20 tests)
 npm run build  # Build production Next.js bundle
 npm start      # Serve production build
 ```
@@ -220,9 +212,45 @@ npm start      # Serve production build
 
 ---
 
-## Quick Capture Webhook & Configuration
+## Reference & Configuration
 
-Append notes from mobile shortcuts, Home Assistant, or cron jobs by setting `CORTEX_CAPTURE_TOKEN` in `.env`:
+<details>
+<summary><strong>Markdown, Shortcuts, Live Queries &amp; Flashcard Syntax</strong></summary>
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Ctrl+K` / `Cmd+K` | Faceted Command Palette (Hybrid FTS5 + semantic search) |
+| `Ctrl+I` / `Cmd+I` | Inline AI Rewrite with side-by-side diff preview |
+| `Ctrl+O` | *(Desktop)* Open Vault directory in OS File Explorer / Finder |
+
+**Live Embedded Queries (`cortex-query`):**
+````markdown
+```cortex-query
+tag: #homelab
+status: active
+sort: updated desc
+view: table
+limit: 10
+```
+````
+
+**SM-2 Flashcards:**
+```markdown
+Q: What isolates Proxmox LXC backups?
+A: Separate HDD dataset and incremental snapshots.
+
+SM-2 :: SuperMemo-2 spaced repetition algorithm.
+
+### Default Hash Algorithm #card
+scryptSync with per-user 16-byte random salt.
+```
+
+</details>
+
+<details>
+<summary><strong>Quick Capture Webhook (<code>POST /api/capture</code>)</strong></summary>
+
+Set `CORTEX_CAPTURE_TOKEN` in `.env` to append notes from mobile shortcuts, Home Assistant, or cron jobs:
 
 ```bash
 curl -X POST http://localhost:3000/api/capture \
@@ -238,7 +266,9 @@ curl -X POST http://localhost:3000/api/capture \
   }'
 ```
 
-Set `"target": "daily"` to append directly to `journals/YYYY-MM-DD.md` instead of `Inbox/Quick Captures.md`.
+Set `"target": "daily"` to append to `journals/YYYY-MM-DD.md` instead of `Inbox/Quick Captures.md`.
+
+</details>
 
 <details>
 <summary><strong>Environment Variables (<code>.env</code>)</strong></summary>
@@ -248,14 +278,14 @@ Set `"target": "daily"` to append directly to `journals/YYYY-MM-DD.md` instead o
 | `CORTEX_DATA_DIR` | Directory holding vaults & SQLite index | `./data` (`/data` in Docker) |
 | `ADMIN_USERNAME` | Initial administrator username | `admin` |
 | `ADMIN_PASSWORD` | Initial administrator password | `cortex-admin-change-me` |
-| `APP_SECRET` | Session signing & encrypted provider key secret (32+ chars) | *(set in `.env`)* |
+| `APP_SECRET` | Session signing & encrypted key secret (32+ chars) | *(set in `.env`)* |
 | `CORTEX_CAPTURE_TOKEN` | Bearer token for `POST /api/capture` | *(empty = disabled)* |
 | `GEMINI_API_KEY` | Optional Gemini API key | *(optional)* |
 | `COPILOT_GITHUB_TOKEN` | Optional GitHub Copilot token | *(optional)* |
 | `JUNIE_API_KEY` | Optional JetBrains Junie API key | *(optional)* |
 | `OLLAMA_BASE_URL` | Ollama server endpoint | `http://127.0.0.1:11434` |
 | `OLLAMA_MODEL` | Default Ollama model name | `llama3.2` |
-| `TRUSTED_PROXY_AUTH_HEADER` | Reverse-proxy OAuth username header (Authentik / Authelia) | *(empty = disabled)* |
+| `TRUSTED_PROXY_AUTH_HEADER` | Reverse-proxy OAuth username header | *(empty = disabled)* |
 
 </details>
 
@@ -277,8 +307,6 @@ CortexMD/
 └── tests/               # Vitest config & end-to-end platform test suite
 ```
 
----
-
 ## Documentation
 
 - [Architecture Overview](docs/ARCHITECTURE.md)
@@ -286,3 +314,9 @@ CortexMD/
 - [Research & Ecosystem Comparison](docs/RESEARCH.md)
 - [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
 - [Implementation Status](docs/IMPLEMENTATION_STATUS.md)
+
+---
+
+<div align="center">
+  <sub>Built for local-first thinkers. Plain Markdown forever.</sub>
+</div>
