@@ -181,7 +181,7 @@ Run CortexMD 100% offline with zero Docker, zero external server, automatic sing
 
 2. **Start the container:**
    ```bash
-   docker compose up -d --build
+   docker compose -f docker/docker-compose.yml up -d --build
    ```
 
 3. **Open CortexMD:**  
@@ -266,14 +266,15 @@ Set `"target": "daily"` to append directly to `journals/YYYY-MM-DD.md` instead o
 ```text
 CortexMD/
 ├── .github/workflows/   # Automated Windows, macOS & Linux release builds
+├── docker/              # Dockerfile & Docker Compose deployment config
 ├── docs/                # Architecture, Proxmox deployment, research & plans
-├── electron/            # Electron desktop shell & standalone server wrapper
+├── electron/            # Electron desktop shell & electron-builder config
 ├── scripts/             # Standalone packaging helpers
 ├── src/
 │   ├── app/             # Next.js App Router pages & REST/SSE API routes
 │   ├── components/      # Editor, Knowledge Graph, Canvas, Dashboard & AI UI
 │   └── lib/             # SQLite FTS5 indexer, RAG engine, ACLs & vault storage
-└── tests/               # End-to-end Vitest platform verification suite
+└── tests/               # Vitest config & end-to-end platform test suite
 ```
 
 ---

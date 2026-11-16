@@ -1,8 +1,8 @@
 services:
   cortexmd:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: cortexmd
     restart: unless-stopped
     ports:
@@ -20,9 +20,9 @@ services:
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     volumes:
       # Bind persistent vault & SQLite storage outside the container on SSD
-      - ${CORTEX_HOST_DATA_PATH:-./data}:/data
+      - ${CORTEX_HOST_DATA_PATH:-../data}:/data
       # Optional mount for HDD backup destination
-      - ${CORTEX_HOST_BACKUP_PATH:-./backups}:/data/backups
+      - ${CORTEX_HOST_BACKUP_PATH:-../backups}:/data/backups
     deploy:
       resources:
         limits:

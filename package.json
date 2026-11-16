@@ -13,14 +13,14 @@
     "build": "next build",
     "build:desktop": "next build && node scripts/prepare-standalone.js",
     "desktop": "node scripts/prepare-standalone.js && electron .",
-    "dist:win": "npm run build:desktop && electron-builder --win",
-    "dist:mac": "npm run build:desktop && electron-builder --mac",
-    "dist:linux": "npm run build:desktop && electron-builder --linux",
-    "dist:all": "npm run build:desktop && electron-builder -mwl",
-    "dist:dir": "npm run build:desktop && electron-builder --dir",
+    "dist:win": "npm run build:desktop && electron-builder --config electron/electron-builder.json --win",
+    "dist:mac": "npm run build:desktop && electron-builder --config electron/electron-builder.json --mac",
+    "dist:linux": "npm run build:desktop && electron-builder --config electron/electron-builder.json --linux",
+    "dist:all": "npm run build:desktop && electron-builder --config electron/electron-builder.json -mwl",
+    "dist:dir": "npm run build:desktop && electron-builder --config electron/electron-builder.json --dir",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --config tests/vitest.config.ts"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
